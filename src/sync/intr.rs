@@ -24,6 +24,9 @@ unsafe impl Send for Intr {}
 
 impl Lock for Intr {
     fn acquire(&self) {
+        if !self.0.get().is_none() {
+            let debug = 1;
+        }
         assert!(self.0.get().is_none());
 
         // Record the old timer status. Here setting the immutable `self` is safe

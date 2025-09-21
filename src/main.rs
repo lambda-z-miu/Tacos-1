@@ -117,6 +117,29 @@ pub extern "C" fn main(hart_id: usize, dtb: usize) -> ! {
     #[cfg(feature = "shell")]
     {
         // TODO: Lab 0
+        loop {
+            use alloc::string::String;
+
+            use crate::thread::Status;
+
+            kprint!("PKUOS>");
+            let mut temp = String::new();
+            let mut newchar;
+            while {
+                newchar = crate::sbi::console_getchar();
+                newchar != 10
+            } {
+                temp.push(char::from_u32(newchar as u32).unwrap());
+            }
+
+            if temp == "whoami" {
+                kprintln!("2300012806");
+            } else if temp == "exit" {
+                break;
+            } else {
+                kprintln!("invalid command")
+            }
+        }
     }
 
     DISKFS.unmount();
