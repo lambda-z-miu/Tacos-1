@@ -47,7 +47,6 @@ impl Manager {
             };
 
             let idle = Builder::new(|| loop {
-                kprint!("A");
                 schedule()
             })
             .name("Idle")

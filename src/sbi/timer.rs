@@ -40,6 +40,29 @@ pub fn timer_ticks() -> i64 {
 /// Increments timer ticks by 1 and sets the next timer interrupt.
 pub fn tick() {
     TICKS.fetch_add(1, SeqCst);
+    use crate::sleepq::SLEEP_QUEUE;
+
+    let old = crate::sbi::interrupt::set(false);
+    let now = timer_ticks();
+
+    kprint!(
+        "TICK while sleepq len {} in {}",
+        SLEEP_QUEUE.len(),
+        crate::thread::current().name()
+    );
+
+    while SLEEP_QUEUE.len() != 0 {
+        kprintln!("IF CALLED");
+        kprint!("DEBUG: time {}, wakeup at {}", now, SLEEP_QUEUE.peek_time());
+        if now >= SLEEP_QUEUE.peek_time() {
+            let ready_thread = SLEEP_QUEUE.pop().thread;
+            crate::thread::wake_up(ready_thread);
+        } else {
+            break;
+        }
+    }
+
+    crate::sbi::interrupt::set(old);
     next();
 }
 

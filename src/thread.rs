@@ -35,30 +35,7 @@ pub fn current() -> Arc<Thread> {
 
 /// Yield the control to another thread (if there's another one ready to run).
 pub fn schedule() {
-    use crate::sbi::timer::{timer_elapsed, timer_ticks};
-    let old = crate::sbi::interrupt::set(false);
-
-    let now = timer_ticks();
-    let temp = &SLEEP_QUEUE;
-    let mut queue = temp.lock();
-    kprint!(
-        "ADDED_check_schedue {} in {}",
-        queue.len(),
-        current().name()
-    );
-
-    while let Some(queue_top) = queue.peek() {
-        kprint!("TOP at {}", queue_top.ticks);
-        if now >= queue_top.ticks {
-            // pop the top item once and wake it
-            let ready_thread = queue.pop().unwrap().thread;
-            wake_up(ready_thread);
-        } else {
-            break;
-        }
-    }
-
-    crate::sbi::interrupt::set(old);
+    // kprint!("!!");
     Manager::get().schedule();
 }
 

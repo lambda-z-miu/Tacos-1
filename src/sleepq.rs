@@ -32,7 +32,23 @@ impl Eq for SleepData {}
 type SleepQueue = Mutex<alloc::collections::BinaryHeap<SleepData>>;
 
 pub static SLEEP_QUEUE: Lazy<SleepQueue> = Lazy::new(|| {
-    let ret = Mutex::new(alloc::collections::BinaryHeap::new());
+    let ret: mutex::Mutex<alloc::collections::binary_heap::BinaryHeap<SleepData>, intr::Intr> =
+        Mutex::new(alloc::collections::BinaryHeap::new());
     kprintln!("SLEEP_Q INIT");
     ret
 });
+
+impl SleepQueue {
+    pub fn len(&self) -> usize {
+        self.lock().len()
+    }
+    pub fn pop(&self) -> SleepData {
+        self.lock().pop().unwrap()
+    }
+    pub fn push(&mut self, data: SleepData) {
+        self.lock().push(data);
+    }
+    pub fn peek_time(&self) -> i64 {
+        self.lock().peek().unwrap().ticks.clone()
+    }
+}
