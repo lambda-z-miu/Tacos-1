@@ -1,6 +1,6 @@
 use core::cell::Cell;
 
-use crate::{sbi, sync::Lock};
+use crate::{sbi, sync::Lock, thread::current};
 
 /// A lock based on disabling timer interrupt.
 ///
@@ -24,10 +24,14 @@ unsafe impl Send for Intr {}
 
 impl Lock for Intr {
     fn acquire(&self) {
+        let old = crate::sbi::interrupt::set(false);
         if !self.0.get().is_none() {
             let debug = 1;
+            kprintln!("debug : {}", !self.0.get().is_none());
+            panic!("!!! in tread {}", current().name());
         }
         assert!(self.0.get().is_none());
+        crate::sbi::interrupt::set(old);
 
         // Record the old timer status. Here setting the immutable `self` is safe
         // because the interrupt is already turned off.

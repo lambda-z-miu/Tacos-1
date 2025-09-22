@@ -15,6 +15,7 @@ pub mod error;
 pub mod fs;
 pub mod io;
 pub mod mem;
+pub mod sleepq;
 pub mod sync;
 pub mod thread;
 pub mod trap;
