@@ -3,7 +3,8 @@ use alloc::sync::Arc;
 use core::cell::{Cell, RefCell};
 
 use crate::sbi;
-use crate::thread::{self, Thread};
+use crate::thread::{self, current, Manager, Thread};
+use core::sync::atomic::Ordering;
 
 /// Atomic counting semaphore
 ///
@@ -41,9 +42,11 @@ impl Semaphore {
             self.waiters.borrow_mut().push_front(thread::current());
 
             // Block the current thread until it's awakened by an `up` operation
+            // kprintln!("downcalled {}", self.value.get());
             thread::block();
         }
         self.value.set(self.value() - 1);
+        // kprintln!("down complete, value is {}", self.value.get());
 
         sbi::interrupt::set(old);
     }
@@ -53,14 +56,47 @@ impl Semaphore {
         let old = sbi::interrupt::set(false);
         let count = self.value.replace(self.value() + 1);
 
+        let waitqlen: usize = self.waiters.borrow().len();
+        kprintln!("waitqlen is {},value is {}", waitqlen, self.value.get());
+        if waitqlen != 0 {
+            kprintln!(
+                "tid {} named {} is waiting",
+                self.waiters.borrow()[0].name(),
+                self.waiters.borrow()[0].id()
+            );
+            assert_eq!(count, 0);
+            let (max_index, max_priority) = self.get_maxpriority();
+            let thread = self.waiters.borrow_mut().remove(max_index);
+            thread::wake_up(thread.expect("error finding index"));
+            if current().priority.load(Ordering::SeqCst) < max_priority {
+                Manager::get().schedule();
+            }
+        }
+
         // Check if we need to wake up a sleeping waiter
+
+        /*
         if let Some(thread) = self.waiters.borrow_mut().pop_back() {
             assert_eq!(count, 0);
 
             thread::wake_up(thread.clone());
-        }
+        } */
 
         sbi::interrupt::set(old);
+    }
+
+    pub fn get_maxpriority(&self) -> (usize, u32) {
+        let waitqlen: usize = self.waiters.borrow().len();
+        let mut max_idex = 0;
+        let mut max_priority = 0;
+        for i in 0..waitqlen {
+            let this_priority = self.waiters.borrow()[i].priority.load(Ordering::SeqCst);
+            if this_priority >= max_priority {
+                max_priority = this_priority;
+                max_idex = i;
+            }
+        }
+        return (max_idex, max_priority);
     }
 
     /// Get the current value of a semaphore

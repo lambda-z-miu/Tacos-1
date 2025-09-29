@@ -46,7 +46,10 @@ use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use core::cell::RefCell;
 
-use crate::sync::{Lock, MutexGuard, Semaphore};
+use crate::{
+    sync::{Lock, MutexGuard, Semaphore},
+    thread::scheduler::priority,
+};
 
 pub struct Condvar(RefCell<VecDeque<Arc<Semaphore>>>);
 
@@ -69,9 +72,27 @@ impl Condvar {
 
     /// Wake up one thread from the waiting list
     pub fn notify_one(&self) {
-        if let Some(sema) = self.0.borrow_mut().pop_back() {
+        let length = self.0.borrow().len();
+        let mut chosen_index = 0;
+        if !self.0.borrow().is_empty() {
+            let mut max_priority = 0;
+            for i in 0..length {
+                let (_, this_priority) = self.0.borrow()[i].get_maxpriority();
+                if this_priority >= max_priority {
+                    max_priority = this_priority;
+                    chosen_index = i;
+                }
+            }
+        }
+
+        let chosen = self.0.borrow_mut().remove(chosen_index);
+        if let Some(sema) = chosen {
             sema.up();
         }
+        /*
+        if let Some(sema) = self.0.borrow_mut().pop_back() {
+            sema.up();
+        }*/
     }
 
     /// Wake up all waiting threads

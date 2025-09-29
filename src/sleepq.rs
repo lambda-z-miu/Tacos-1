@@ -34,7 +34,7 @@ type SleepQueue = Mutex<alloc::collections::BinaryHeap<SleepData>>;
 pub static SLEEP_QUEUE: Lazy<SleepQueue> = Lazy::new(|| {
     let ret: mutex::Mutex<alloc::collections::binary_heap::BinaryHeap<SleepData>, intr::Intr> =
         Mutex::new(alloc::collections::BinaryHeap::new());
-    kprintln!("SLEEP_Q INIT");
+    // kprintln!("SLEEP_Q INIT");
     ret
 });
 
@@ -45,7 +45,7 @@ impl SleepQueue {
     pub fn pop(&self) -> SleepData {
         self.lock().pop().unwrap()
     }
-    pub fn push(&mut self, data: SleepData) {
+    pub fn push(&self, data: SleepData) {
         self.lock().push(data);
     }
     pub fn peek_time(&self) -> i64 {

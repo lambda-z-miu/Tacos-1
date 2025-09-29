@@ -5,11 +5,12 @@ pub mod manager;
 pub mod scheduler;
 pub mod switch;
 
-use core::{cell::OnceCell, cmp::Reverse, ops::DerefMut};
+use core::{cell::OnceCell, cmp::Reverse, convert::TryInto, ops::DerefMut};
 
 use crate::{
     sbi::{self, timer::tick},
     sync::{intr, mutex, Lazy, Lock},
+    thread::scheduler::priority::PriorityScheduler,
 };
 
 pub use self::imp::*;
@@ -44,7 +45,7 @@ pub fn exit() -> ! {
     {
         let current = Manager::get().current.lock();
 
-        #[cfg(feature = "debug")]
+        // #[cfg(feature = "debug")]
         kprintln!("Exit: {:?}", *current);
 
         current.set_status(Status::Dying);
@@ -80,11 +81,18 @@ pub fn wake_up(thread: Arc<Thread>) {
 }
 
 /// (Lab1) Sets the current thread's priority to a given value
-pub fn set_priority(_priority: u32) {}
+pub fn set_priority(_priority: u32) {
+    current()
+        .priority
+        .store(_priority, core::sync::atomic::Ordering::SeqCst);
+    schedule();
+}
 
 /// (Lab1) Returns the current thread's effective priority.
 pub fn get_priority() -> u32 {
-    0
+    current()
+        .priority
+        .load(core::sync::atomic::Ordering::SeqCst)
 }
 
 /// (Lab1) Make the current thread sleep for the given ticks.
@@ -92,13 +100,8 @@ pub fn sleep(ticks: i64) {
     use crate::sbi::timer::timer_ticks;
     use sbi::interrupt::set;
 
-    // let old = crate::sync::Intr::set(false);
-
-    // let time_locker = crate::sync::Intr::new();
-    // Lock::acquire(&time_locker);
-    kprintln!("CALLED SLEEP {}", timer_ticks());
+    // kprintln!("CALLED SLEEP {}", timer_ticks());
     if ticks <= 0 {
-        // Lock::release(&time_locker);
         return;
     }
 
@@ -112,9 +115,8 @@ pub fn sleep(ticks: i64) {
             thread: current.clone(),
         }),
     );
-    kprint!("CHECK ADDED {}", SLEEP_QUEUE.lock().len());
+    // kprint!("CHECK ADDED {}", SLEEP_QUEUE.lock().len());
     set(true);
-    // Lock::release(&time_locker);
     block();
 
     /*
