@@ -20,4 +20,5 @@ pub fn main(sema: Arc<Semaphore>, _bootargs: &str) {
 
     kprintln!("Leaving test...");
     sema.up();
+    kprintln!("test left!");
 }

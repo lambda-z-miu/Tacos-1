@@ -132,7 +132,7 @@ impl Manager {
     pub fn schedule_tail(&self, previous: Arc<Thread>) {
         assert!(!interrupt::get());
 
-        #[cfg(feature = "debug")]
+        // #[cfg(feature = "debug")]
         kprintln!("[THREAD] switch to {:?}", *self.current.lock());
 
         match previous.status() {

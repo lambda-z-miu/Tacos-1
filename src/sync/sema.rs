@@ -3,7 +3,7 @@ use alloc::sync::Arc;
 use core::cell::{Cell, RefCell};
 
 use crate::sbi;
-use crate::thread::{self, current, Manager, Thread};
+use crate::thread::{self, current, Manager, Status, Thread};
 use core::sync::atomic::Ordering;
 
 /// Atomic counting semaphore
@@ -57,18 +57,29 @@ impl Semaphore {
         let count = self.value.replace(self.value() + 1);
 
         let waitqlen: usize = self.waiters.borrow().len();
-        kprintln!("waitqlen is {},value is {}", waitqlen, self.value.get());
+        // kprintln!("waitqlen is {} ,value is {}", waitqlen, self.value.get());
         if waitqlen != 0 {
             kprintln!(
-                "tid {} named {} is waiting",
+                "tid {} named {} at {} priority is waiting",
                 self.waiters.borrow()[0].name(),
-                self.waiters.borrow()[0].id()
+                self.waiters.borrow()[0].id(),
+                self.waiters.borrow()[0].priority.load(Ordering::SeqCst)
             );
             assert_eq!(count, 0);
             let (max_index, max_priority) = self.get_maxpriority();
             let thread = self.waiters.borrow_mut().remove(max_index);
             thread::wake_up(thread.expect("error finding index"));
             if current().priority.load(Ordering::SeqCst) < max_priority {
+                kprintln!("max index {} qlen {}", max_index, waitqlen);
+                // self.waiters.borrow()[max_index].status() != Status::Blocked;
+
+                kprintln!(
+                    "scheduled out current thread tid {} name {} at {} priority",
+                    current().id(),
+                    current().name(),
+                    current().priority.load(Ordering::SeqCst)
+                );
+                sbi::interrupt::set(old);
                 Manager::get().schedule();
             }
         }
@@ -81,7 +92,7 @@ impl Semaphore {
 
             thread::wake_up(thread.clone());
         } */
-
+        kprintln!("!!!!!!!!!!!REACHED!!!!!!!!!!!!!");
         sbi::interrupt::set(old);
     }
 
