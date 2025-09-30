@@ -31,6 +31,7 @@ pub struct Thread {
     status: Mutex<Status>,
     context: Mutex<Context>,
     pub priority: AtomicU32,
+    pub priority_setted: Mutex<Option<u32>>,
     pub userproc: Option<UserProc>,
     pub pagetable: Option<Mutex<PageTable>>,
 }
@@ -56,6 +57,7 @@ impl Thread {
             priority: AtomicU32::new(priority),
             userproc,
             pagetable: pagetable.map(Mutex::new),
+            priority_setted: Mutex::new(None),
         }
     }
 
@@ -177,7 +179,7 @@ impl Builder {
     pub fn spawn(self) -> Arc<Thread> {
         let new_thread = self.build();
 
-        #[cfg(feature = "debug")]
+        // #[cfg(feature = "debug")]
         kprintln!("[THREAD] create {:?}", new_thread);
 
         Manager::get().register(new_thread.clone());

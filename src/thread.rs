@@ -86,6 +86,7 @@ pub fn set_priority(_priority: u32) {
         .priority
         .store(_priority, core::sync::atomic::Ordering::SeqCst);
     schedule();
+    current().priority_setted.lock().replace(_priority);
 }
 
 /// (Lab1) Returns the current thread's effective priority.
