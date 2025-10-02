@@ -1,52 +1,41 @@
-Running priority-fifo ... PASSED
-Running priority-change ... PASSED
-Running alarm-negative ... PASSED
-Running donation-three ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m60 ms[0m] priority restored to 31, from 36
-[[38;2;129;165;113;1m62 ms[0m] tid child named 3 at 34 priority is waiting
-[[38;2;129;165;113;1m63 ms[0m] max index 0 qlen 1
-[[38;2;129;165;113;1m63 ms[0m] scheduled out current thread tid 0 name test at 31 priority
-[[38;2;129;165;113;1m64 ms[0m] [THREAD] switch to child(5)[Running]
-[[38;2;129;165;113;1m64 ms[0m] [THREAD] switch to child(3)[Running]
-[[38;2;129;165;113;1m64 ms[0m] panicked at src/../test/schedule/donation/three.rs:20:9:
-assertion `left == right` failed: Medium should exit after high.
-  left: [0, 0, 0, 0]
- right: [0, 0, 0, 1]
-Running priority-alarm ... PASSED
-Running alarm-simultaneous ... PASSED
-Running donation-nest ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m56 ms[0m] [THREAD] create child(4)[Ready]
-[[38;2;129;165;113;1m57 ms[0m] [THREAD] switch to child(4)[Running]
-[[38;2;129;165;113;1m57 ms[0m] CALLED:LOCK
-[[38;2;129;165;113;1m57 ms[0m] cur prio 33,hld prio 32
-[[38;2;129;165;113;1m57 ms[0m] after donation, thread which is waited has 33 priority where it used to have 32
-[[38;2;129;165;113;1m57 ms[0m] [THREAD] switch to test(0)[Running]
-[[38;2;129;165;113;1m57 ms[0m] panicked at src/../test/schedule/donation/nest.rs:61:9:
-assertion `left == right` failed: Low thread should have priority 33. Actual priority 32.
-  left: 33
- right: 32
-Running priority-preempt ... PASSED
 Running alarm-single ... PASSED
-Running alarm-multiple ... PASSED
-Running donation-lower ... PASSED
-Running donation-two ... PASSED
-Running donation-one ... PASSED
+Running priority-condvar ... PASSED
+Running priority-change ... PASSED
+Running priority-sema ... PASSED
+Running alarm-zero ... PASSED
+Running alarm-negative ... PASSED
+Running priority-preempt ... PASSED
+Running donation-sema ... PASSED
 Running donation-chain ... FAILED
 STDOUT:
-[[38;2;129;165;113;1m54 ms[0m] [THREAD] create Donor(5)[Ready]
-[[38;2;129;165;113;1m54 ms[0m] [THREAD] switch to Donor(5)[Running]
-[[38;2;129;165;113;1m54 ms[0m] CALLED:LOCK
-[[38;2;129;165;113;1m54 ms[0m] cur prio 4,hld prio 2
-[[38;2;129;165;113;1m54 ms[0m] after donation, thread which is waited has 4 priority where it used to have 2
-[[38;2;129;165;113;1m55 ms[0m] [THREAD] switch to test(0)[Running]
-[[38;2;129;165;113;1m55 ms[0m] panicked at src/../test/schedule/donation/chain.rs:80:9:
+[[38;2;129;165;113;1m28 ms[0m] [THREAD] switch to test(0)[Running]
+[[38;2;129;165;113;1m28 ms[0m] [THREAD] create Donor(5)[Ready]
+[[38;2;129;165;113;1m28 ms[0m] [THREAD] switch to Donor(5)[Running]
+[[38;2;129;165;113;1m28 ms[0m] CALLED:LOCK
+[[38;2;129;165;113;1m28 ms[0m] cur prio 4,hld prio 2
+[[38;2;129;165;113;1m28 ms[0m] [THREAD] switch to test(0)[Running]
+[[38;2;129;165;113;1m29 ms[0m] panicked at src/../test/schedule/donation/chain.rs:80:9:
 assertion `left == right` failed: Main should have priority 4. Actual priority 2.
   left: 4
  right: 2
-Running priority-sema ... PASSED
-Running priority-condvar ... PASSED
-Running donation-sema ... PASSED
-Running alarm-zero ... PASSED
-GRADE: 78/100
+Running priority-fifo ... PASSED
+Running priority-alarm ... PASSED
+Running donation-three ... PASSED
+Running donation-one ... PASSED
+Running donation-nest ... FAILED
+STDOUT:
+[[38;2;129;165;113;1m32 ms[0m] [THREAD] switch to test(0)[Running]
+[[38;2;129;165;113;1m32 ms[0m] [THREAD] create child(4)[Ready]
+[[38;2;129;165;113;1m32 ms[0m] [THREAD] switch to child(4)[Running]
+[[38;2;129;165;113;1m32 ms[0m] CALLED:LOCK
+[[38;2;129;165;113;1m33 ms[0m] cur prio 33,hld prio 32
+[[38;2;129;165;113;1m33 ms[0m] [THREAD] switch to test(0)[Running]
+[[38;2;129;165;113;1m33 ms[0m] panicked at src/../test/schedule/donation/nest.rs:61:9:
+assertion `left == right` failed: Low thread should have priority 33. Actual priority 32.
+  left: 33
+ right: 32
+Running alarm-simultaneous ... PASSED
+Running donation-two ... PASSED
+Running donation-lower ... PASSED
+Running alarm-multiple ... PASSED
+GRADE: 84/100

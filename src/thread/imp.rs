@@ -1,13 +1,16 @@
 //! Implementation of kernel threads
 
 use alloc::boxed::Box;
+use alloc::collections::vec_deque::VecDeque;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::fmt::{self, Debug};
 use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
 
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
+use crate::sync::sleep::DonationData;
 use crate::thread::Manager;
 use crate::userproc::UserProc;
 
@@ -34,6 +37,8 @@ pub struct Thread {
     pub priority_setted: Mutex<Option<u32>>,
     pub userproc: Option<UserProc>,
     pub pagetable: Option<Mutex<PageTable>>,
+    pub donationq: Mutex<VecDeque<DonationData>>,
+    pub stored_prev: Mutex<(u32, u32)>,
 }
 
 impl Thread {
@@ -58,7 +63,29 @@ impl Thread {
             userproc,
             pagetable: pagetable.map(Mutex::new),
             priority_setted: Mutex::new(None),
+            donationq: Mutex::new(VecDeque::new()),
+            stored_prev: Mutex::new((0xFFFFFFFF, 0)),
         }
+    }
+
+    pub fn add_donation(&self, newitem: DonationData) {
+        self.donationq.lock().push_back(newitem);
+    }
+
+    pub fn delete_donation(&self, lockid: u32) -> Option<DonationData> {
+        let ret = self
+            .donationq
+            .lock()
+            .clone()
+            .into_iter()
+            .find(|x| x.lockid == lockid);
+        self.donationq.lock().retain(|x| x.lockid != lockid);
+        ret
+    }
+
+    pub fn donate(&self, acceptor: Arc<Thread>) {
+        let don_priority = self.priority.load(SeqCst);
+        acceptor.priority.store(don_priority, SeqCst);
     }
 
     pub fn id(&self) -> isize {

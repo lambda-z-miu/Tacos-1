@@ -92,7 +92,6 @@ impl Semaphore {
 
             thread::wake_up(thread.clone());
         } */
-        kprintln!("!!!!!!!!!!!REACHED!!!!!!!!!!!!!");
         sbi::interrupt::set(old);
     }
 
