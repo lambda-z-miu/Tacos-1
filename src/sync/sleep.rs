@@ -41,39 +41,45 @@ impl Default for Sleep {
     }
 }
 
+pub fn donation_wrapped(donner: Arc<Thread>, acceptor: Arc<Thread>, lockid: u32) {
+    let current_priority: u32 = donner.priority.load(Ordering::SeqCst);
+    let holder_priority: u32 = acceptor.priority.load(Ordering::SeqCst);
+
+    // if donation is needed
+    if current_priority > holder_priority {
+        // call donate function
+        donner.donate(acceptor.clone());
+
+        // construct DonationData
+        let current_dd = DonationData {
+            donner: donner.clone(),
+            acceptor: acceptor.clone(),
+            donner_priority: current_priority,
+            prev_priority: holder_priority,
+            is_donner: true,
+            lockid: lockid,
+        };
+        donner.add_donation(current_dd.clone());
+        let mut acceptor_dd = current_dd.clone();
+        acceptor_dd.is_donner = false;
+        acceptor.add_donation(acceptor_dd);
+        // register the donation relationship in current & acceptor.
+
+        kprintln!("cur prio {},hld prio {}", current_priority, holder_priority);
+        Manager::get().schedule();
+    }
+}
+
 impl Lock for Sleep {
     fn acquire(&self) {
         if self.holder.borrow().is_some() {
-            kprintln!("CALLED:LOCK");
             let mut acceptor: Arc<Thread> = self.holder.borrow_mut().as_mut().unwrap().clone();
-            let current_priority: u32 = current().priority.load(Ordering::SeqCst);
-            let holder_priority: u32 = acceptor.priority.load(Ordering::SeqCst);
 
-            // if donation is needed
-            if current_priority > holder_priority {
-                // call donate function
-                current().donate(acceptor.clone());
-
-                // construct DonationData
-                let current_dd = DonationData {
-                    donner: current().clone(),
-                    acceptor: self.holder.borrow().as_ref().unwrap().clone(),
-                    donner_priority: current_priority,
-                    prev_priority: holder_priority,
-                    is_donner: true,
-                    lockid: self.lockid,
-                };
-                current().add_donation(current_dd.clone());
-                let mut acceptor_dd = current_dd.clone();
-                acceptor_dd.is_donner = false;
-                acceptor.add_donation(acceptor_dd);
-                // register the donation relationship in current & acceptor.
-
-                kprintln!("cur prio {},hld prio {}", current_priority, holder_priority);
-                Manager::get().schedule();
-            }
+            donation_wrapped(current(), acceptor.clone(), self.lockid);
+            crate::thread::Thread::find_and_donate(acceptor, self.lockid);
         }
         self.inner.down();
+        kprintln!("lock {} is acquired by {}", self.lockid, current().id());
         self.holder.borrow_mut().replace(thread::current());
     }
 
@@ -87,7 +93,17 @@ impl Lock for Sleep {
 
         let ret = current().delete_donation(self.lockid);
         if let Some(ret) = ret {
-            ret.donner.delete_donation(self.lockid);
+            let donner = ret.donner;
+            donner.delete_donation(self.lockid);
+
+            current()
+                .donationq
+                .lock()
+                .retain(|x| x.donner.id() != donner.id());
+            donner
+                .donationq
+                .lock()
+                .retain(|x| x.acceptor.id() != current().id());
 
             let prev = ret.prev_priority;
             if current().stored_prev.lock().0 > self.lockid {
@@ -100,9 +116,10 @@ impl Lock for Sleep {
                 "lock {} has {} assoc items with record_prev {}",
                 self.lockid,
                 current().donationq.lock().len(),
-                prev
+                current().stored_prev.lock().1
             );
             for i in current().donationq.lock().clone().into_iter() {
+                kprintln!("!!!!!!{}{}{}", i.donner.id(), i.acceptor.id(), i.lockid);
                 final_priority = max(final_priority, i.donner_priority);
             }
 
@@ -113,26 +130,6 @@ impl Lock for Sleep {
             );
             current().priority.store(final_priority, Ordering::SeqCst);
         }
-
-        /*
-        if self.prev_priority.borrow().is_some() {
-            // restore donation
-            let prev_prio_value = self
-                .prev_priority
-                .borrow()
-                .as_ref()
-                .unwrap()
-                .load(Ordering::SeqCst);
-            kprintln!(
-                "priority restored to {}, from {}",
-                prev_prio_value,
-                current().priority.load(Ordering::SeqCst)
-            );
-            current().priority.store(prev_prio_value, Ordering::SeqCst);
-
-            // clear prev_priority
-            *self.prev_priority.borrow_mut() = None;
-        }*/
 
         if current().priority_setted.lock().is_some() {
             //use setted priority to overwite restored ones
