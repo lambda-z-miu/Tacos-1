@@ -66,6 +66,7 @@ impl Semaphore {
                 self.waiters.borrow()[0].priority.load(Ordering::SeqCst)
             );
             assert_eq!(count, 0);
+            assert_ne!(self.value(), 0);
             let (max_index, max_priority) = self.get_maxpriority();
             let thread = self.waiters.borrow_mut().remove(max_index);
             thread::wake_up(thread.expect("error finding index"));

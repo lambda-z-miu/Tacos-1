@@ -69,11 +69,13 @@ impl Thread {
     }
 
     pub fn add_donation(&self, newitem: DonationData) {
+        kprintln!("registerd {} lock in thread {}", newitem.lockid, self.id());
         self.donationq.lock().push_back(newitem);
     }
 
     pub fn find_and_donate(donner: Arc<Thread>, lockid: u32) {
-        for i in donner.donationq.lock().clone().into_iter() {
+        let temp = donner.donationq.lock().clone();
+        for i in temp.into_iter() {
             if i.is_donner && i.lockid != lockid {
                 Self::find_and_donate(i.acceptor.clone(), lockid);
                 sleep::donation_wrapped(donner.clone(), i.acceptor.clone(), lockid);

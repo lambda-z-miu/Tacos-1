@@ -49,9 +49,10 @@ otherwise, register the desired wake up time in SleepQueue, then mark current pr
 ### Synchronization
 
 > A4: How are race conditions avoided when `sleep()` is being called concurrently?
-close intr and
+interupts are closed during sleep function and restored later.
 
 > A5: How are race conditions avoided when a timer interrupt occurs during a call to `sleep()`?
+
 
 ## Priority Scheduling
 
@@ -64,6 +65,7 @@ close intr and
 ### Algorithms
 
 > B3: How do you ensure that the highest priority thread waiting for a lock, semaphore, or condition variable wakes up first?
+I used seperated link-list to manage threads of different priority levels, and traverse from top when choosing new thread to run.
 
 > B4: Describe the sequence of events when a thread tries to acquire a lock. How is nested donation handled?
 
