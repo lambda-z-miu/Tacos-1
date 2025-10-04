@@ -79,8 +79,8 @@ pub fn main() {
         let priority = get_priority();
         assert_eq!(
             expected, priority,
-            "Main should have priority {}. Actual priority {}.",
-            expected, priority
+            "Main should have priority {}. Actual priority {} in iteration {}.",
+            expected, priority, p
         );
 
         Builder::new(move || interloop(expected as usize - 1))

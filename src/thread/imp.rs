@@ -10,7 +10,7 @@ use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
 
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
-use crate::sync::sleep::DonationData;
+use crate::sync::sleep::{self, DonationData};
 use crate::thread::Manager;
 use crate::userproc::UserProc;
 
@@ -69,10 +69,22 @@ impl Thread {
     }
 
     pub fn add_donation(&self, newitem: DonationData) {
+        kprintln!("registerd {} lock in thread {}", newitem.lockid, self.id());
         self.donationq.lock().push_back(newitem);
     }
 
+    pub fn find_and_donate(donner: Arc<Thread>, lockid: u32) {
+        let temp = donner.donationq.lock().clone();
+        for i in temp.into_iter() {
+            if i.is_donner && i.lockid != lockid {
+                sleep::donation_wrapped(donner.clone(), i.acceptor.clone(), lockid);
+                Self::find_and_donate(i.acceptor.clone(), lockid);
+            }
+        }
+    }
+
     pub fn delete_donation(&self, lockid: u32) -> Option<DonationData> {
+        kprintln!("CLEARED {} form {}", lockid, self.id());
         let ret = self
             .donationq
             .lock()

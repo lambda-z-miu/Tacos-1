@@ -106,7 +106,7 @@ pub fn sleep(ticks: i64) {
         return;
     }
 
-    set(false);
+    let old = set(false);
     let curren_tick = timer_ticks();
     let current = current();
     let wake_time = curren_tick + ticks;
@@ -117,7 +117,7 @@ pub fn sleep(ticks: i64) {
         }),
     );
     // kprint!("CHECK ADDED {}", SLEEP_QUEUE.lock().len());
-    set(true);
+    set(old);
     block();
 
     /*

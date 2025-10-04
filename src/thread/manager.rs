@@ -94,6 +94,12 @@ impl Manager {
         );
 
         if let Some(next) = next {
+            kprintln!(
+                "chosen {} named {} at {}",
+                next.id(),
+                next.name(),
+                next.priority.load(core::sync::atomic::Ordering::SeqCst)
+            );
             assert_eq!(next.status(), Status::Ready);
             assert!(!next.overflow(), "Next thread has overflowed its stack.");
             next.set_status(Status::Running);
