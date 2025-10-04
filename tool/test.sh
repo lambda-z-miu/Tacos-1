@@ -1,1 +1,0 @@
-cargo tt -c alarm-zero

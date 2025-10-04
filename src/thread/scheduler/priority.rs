@@ -71,23 +71,6 @@ impl Schedule for PriorityScheduler {
             }
         }
         return None;
-
-        /*
-
-        let chosen = chosen.unwrap();
-        if (chosen_priotiry <= current_priority && current().status() == Status::Running) {
-            self.0[chosen_priotiry as usize].push_back(chosen);
-            return None;
-        } else {
-            kprintln!(
-                "chosen thread, id {}, name {}, at priority {}",
-                chosen.id(),
-                chosen.name(),
-                chosen_priotiry,
-            );
-            return Some(chosen);
-        }
-        */
     }
 }
 
