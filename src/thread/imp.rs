@@ -77,8 +77,8 @@ impl Thread {
         let temp = donner.donationq.lock().clone();
         for i in temp.into_iter() {
             if i.is_donner && i.lockid != lockid {
-                Self::find_and_donate(i.acceptor.clone(), lockid);
                 sleep::donation_wrapped(donner.clone(), i.acceptor.clone(), lockid);
+                Self::find_and_donate(i.acceptor.clone(), lockid);
             }
         }
     }

@@ -1,30 +1,19 @@
-Running donation-two ... PASSED
+Running alarm-zero ... PASSED
 Running donation-nest ... PASSED
 Running donation-sema ... PASSED
-Running priority-fifo ... PASSED
-Running alarm-zero ... PASSED
-Running alarm-single ... PASSED
-Running donation-chain ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m73 ms[0m] cur prio 6,hld prio 4
-[[38;2;129;165;113;1m74 ms[0m] registerd 3 lock in thread 5
-[[38;2;129;165;113;1m74 ms[0m] registerd 3 lock in thread 3
-[[38;2;129;165;113;1m74 ms[0m] cur prio 6,hld prio 4
-[[38;2;129;165;113;1m74 ms[0m] chosen 0 named test at 4
-[[38;2;129;165;113;1m74 ms[0m] [THREAD] switch to test(0)[Running]
-[[38;2;129;165;113;1m74 ms[0m] panicked at src/../test/schedule/donation/chain.rs:80:9:
-assertion `left == right` failed: Main should have priority 6. Actual priority 4.
-  left: 6
- right: 4
-Running donation-lower ... PASSED
-Running priority-change ... PASSED
-Running alarm-negative ... PASSED
-Running priority-sema ... PASSED
 Running priority-alarm ... PASSED
 Running alarm-multiple ... PASSED
-Running donation-three ... PASSED
-Running priority-condvar ... PASSED
-Running alarm-simultaneous ... PASSED
+Running alarm-negative ... PASSED
+Running alarm-single ... PASSED
+Running donation-two ... PASSED
 Running priority-preempt ... PASSED
+Running donation-three ... PASSED
+Running donation-lower ... PASSED
+Running alarm-simultaneous ... PASSED
+Running priority-fifo ... PASSED
 Running donation-one ... PASSED
-GRADE: 90/100
+Running priority-change ... PASSED
+Running priority-sema ... PASSED
+Running donation-chain ... PASSED
+Running priority-condvar ... PASSED
+GRADE: 100/100
