@@ -69,7 +69,7 @@ impl Thread {
     }
 
     pub fn add_donation(&self, newitem: DonationData) {
-        kprintln!("registerd {} lock in thread {}", newitem.lockid, self.id());
+        // kprintln!("registerd {} lock in thread {}", newitem.lockid, self.id());
         self.donationq.lock().push_back(newitem);
     }
 
@@ -84,7 +84,6 @@ impl Thread {
     }
 
     pub fn delete_donation(&self, lockid: u32) -> Option<DonationData> {
-        kprintln!("CLEARED {} form {}", lockid, self.id());
         let ret = self
             .donationq
             .lock()
@@ -218,7 +217,7 @@ impl Builder {
     pub fn spawn(self) -> Arc<Thread> {
         let new_thread = self.build();
 
-        // #[cfg(feature = "debug")]
+        #[cfg(feature = "debug")]
         kprintln!("[THREAD] create {:?}", new_thread);
 
         Manager::get().register(new_thread.clone());

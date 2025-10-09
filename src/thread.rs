@@ -45,7 +45,7 @@ pub fn exit() -> ! {
     {
         let current = Manager::get().current.lock();
 
-        // #[cfg(feature = "debug")]
+        #[cfg(feature = "debug")]
         kprintln!("Exit: {:?}", *current);
 
         current.set_status(Status::Dying);

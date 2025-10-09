@@ -79,13 +79,13 @@ impl Lock for Sleep {
             crate::thread::Thread::find_and_donate(acceptor, self.lockid);
         }
         self.inner.down();
-        kprintln!("lock {} is acquired by {}", self.lockid, current().id());
+        // kprintln!("lock {} is acquired by {}", self.lockid, current().id());
         self.holder.borrow_mut().replace(thread::current());
     }
 
     /// called in acceptor thread
     fn release(&self) {
-        kprintln!("lockid {} is released", self.lockid);
+        // kprintln!("lockid {} is released", self.lockid);
         assert!(Arc::ptr_eq(
             self.holder.borrow().as_ref().unwrap(),
             &thread::current()
@@ -112,12 +112,7 @@ impl Lock for Sleep {
             }
 
             let mut final_priority = current().stored_prev.lock().1;
-            kprintln!(
-                "lock {} has {} assoc items with record_prev {}",
-                self.lockid,
-                current().donationq.lock().len(),
-                current().stored_prev.lock().1
-            );
+
             for i in current().donationq.lock().clone().into_iter() {
                 kprintln!("!!!!!!{}{}{}", i.donner.id(), i.acceptor.id(), i.lockid);
                 final_priority = max(final_priority, i.donner_priority);

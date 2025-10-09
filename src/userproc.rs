@@ -5,8 +5,10 @@ mod load;
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::arch::asm;
-use core::mem::MaybeUninit;
+use core::arch::{asm, global_asm};
+use core::mem::{size_of, MaybeUninit};
+use core::ptr::{self, copy, null, write};
+use ptr::null_mut;
 use riscv::register::sstatus;
 
 use crate::fs::File;
@@ -41,7 +43,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
 
     // It only copies L2 pagetable. This approach allows the new thread
     // to access kernel code and data during syscall without the need to
-    // switch pagetables.
+    // swithch pagetables.
     let mut pt = KernelPgTable::clone();
 
     let exec_info = match load::load_executable(&mut file, &mut pt) {

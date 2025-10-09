@@ -94,12 +94,6 @@ impl Manager {
         );
 
         if let Some(next) = next {
-            kprintln!(
-                "chosen {} named {} at {}",
-                next.id(),
-                next.name(),
-                next.priority.load(core::sync::atomic::Ordering::SeqCst)
-            );
             assert_eq!(next.status(), Status::Ready);
             assert!(!next.overflow(), "Next thread has overflowed its stack.");
             next.set_status(Status::Running);
@@ -138,7 +132,7 @@ impl Manager {
     pub fn schedule_tail(&self, previous: Arc<Thread>) {
         assert!(!interrupt::get());
 
-        // #[cfg(feature = "debug")]
+        #[cfg(feature = "debug")]
         kprintln!("[THREAD] switch to {:?}", *self.current.lock());
 
         match previous.status() {

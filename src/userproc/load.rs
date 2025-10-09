@@ -72,6 +72,7 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
     // Install flags.
     let mut leaf_flag = PTEFlags::V | PTEFlags::U | PTEFlags::R;
     if phdr.flags().contains(ProgramHeaderFlags::EXECUTE) {
+        kprintln!("EXE SEC FOUND at {}", phdr.vaddr());
         leaf_flag |= PTEFlags::X;
     }
     if phdr.flags().contains(ProgramHeaderFlags::WRITE) {
@@ -100,6 +101,7 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
         // The installed page will be freed when pagetable drops, which happens
         // when user process exits. No manual resource collect is required.
         let uaddr = ubase + p * PG_SIZE;
+        kprintln!("addr from {} loaded", uaddr);
         pagetable.map(buf.into(), uaddr, 1, leaf_flag);
 
         readbytes -= readsz;
