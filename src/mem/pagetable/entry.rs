@@ -34,6 +34,10 @@ bitflags::bitflags! {
 impl Entry {
     const FLAG_SHIFT: usize = 10;
 
+    pub fn print(&self) {
+        kprintln!("{:x}", self.0);
+    }
+
     pub fn new(pa: PhysAddr, flags: PTEFlags) -> Entry {
         Entry((((pa.value() >> PG_SHIFT) & PPN_MASK) << Self::FLAG_SHIFT) | flags.bits())
     }

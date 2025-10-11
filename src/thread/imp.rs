@@ -2,13 +2,15 @@
 
 use alloc::boxed::Box;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::fmt::{self, Debug};
 use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
 
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
-use crate::thread::Manager;
+use crate::sync::Semaphore;
+use crate::thread::{current, Manager};
 use crate::userproc::UserProc;
 
 pub const PRI_DEFAULT: u32 = 31;
@@ -33,6 +35,9 @@ pub struct Thread {
     pub priority: AtomicU32,
     pub userproc: Option<UserProc>,
     pub pagetable: Option<Mutex<PageTable>>,
+    pub exit_code: Mutex<Option<isize>>,
+    pub children: Mutex<Vec<Arc<Thread>>>,
+    pub completed: Semaphore,
 }
 
 impl Thread {
@@ -56,6 +61,9 @@ impl Thread {
             priority: AtomicU32::new(priority),
             userproc,
             pagetable: pagetable.map(Mutex::new),
+            exit_code: Mutex::new(None),
+            children: Mutex::new(Vec::new()),
+            completed: Semaphore::new(0),
         }
     }
 
@@ -176,6 +184,7 @@ impl Builder {
     /// Note that this function CANNOT be called during [`Manager`]'s initialization.
     pub fn spawn(self) -> Arc<Thread> {
         let new_thread = self.build();
+        current().children.lock().push(new_thread.clone());
 
         #[cfg(feature = "debug")]
         kprintln!("[THREAD] create {:?}", new_thread);

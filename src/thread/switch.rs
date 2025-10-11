@@ -13,12 +13,12 @@ use core::arch::global_asm;
 use crate::thread::{Context, Manager, Thread};
 
 #[allow(improper_ctypes)]
-extern "C" {
+unsafe extern "C" {
     /// Save current registers in the "old" context, and load from the "new" context.
     ///
     /// The first argument is not used in this function, but it
     /// will be forwarded to [`schedule_tail_wrapper`].
-    pub fn switch(previous: *const Thread, old: *mut Context, new: *mut Context);
+    pub unsafe fn switch(previous: *const Thread, old: *mut Context, new: *mut Context);
 }
 
 global_asm! {r#"
