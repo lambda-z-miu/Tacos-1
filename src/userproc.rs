@@ -110,7 +110,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     }
 
     kprintln!("MOVED ARGV");
-    frame.x[10] = 99; // first arg reg
+    frame.x[10] = argc; // first arg reg
     frame.x[11] = argv_base as usize;
     frame.x[2] = argv_base as usize;
 
@@ -135,7 +135,6 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
 /// Panic if the current thread doesn't own a user process.
 pub fn exit(_value: isize) -> ! {
     // TODO: Lab2.
-    panic!("ENTERED EXIT TRAP");
     if current().userproc.is_none() {
         panic!("cannot exit with no user process");
     } else {

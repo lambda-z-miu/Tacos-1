@@ -1,12 +1,14 @@
 //! Implementation of kernel threads
 
 use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::fmt::{self, Debug};
 use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
 
+use crate::fs::File;
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
 use crate::sync::Semaphore;
@@ -22,6 +24,7 @@ pub const STACK_TOP: usize = 0x80500000;
 pub const MAGIC: usize = 0xdeadbeef;
 
 pub type Mutex<T> = crate::sync::Mutex<T, crate::sync::Intr>;
+const MAX_FD: u32 = 32767;
 
 /* --------------------------------- Thread --------------------------------- */
 /// All data of a kernel thread
@@ -38,6 +41,7 @@ pub struct Thread {
     pub exit_code: Mutex<Option<isize>>,
     pub children: Mutex<Vec<Arc<Thread>>>,
     pub completed: Semaphore,
+    pub fd: Mutex<BTreeMap<u32, File>>,
 }
 
 impl Thread {
@@ -64,7 +68,17 @@ impl Thread {
             exit_code: Mutex::new(None),
             children: Mutex::new(Vec::new()),
             completed: Semaphore::new(0),
+            fd: Mutex::new(BTreeMap::new()),
         }
+    }
+
+    pub fn get_fresh_fd(&self) -> u32 {
+        for i in 3..=MAX_FD {
+            if self.fd.lock().get_key_value(&i).is_none() {
+                return i;
+            }
+        }
+        panic!("TOO MANY FD");
     }
 
     pub fn id(&self) -> isize {

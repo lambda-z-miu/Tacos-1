@@ -2,6 +2,7 @@
 ///
 /// We uses [`alloc::string::String`] methods for path
 /// manipulation.
+#[derive(Clone)]
 pub struct Path(alloc::string::String);
 
 impl Path {

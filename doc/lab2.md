@@ -10,6 +10,11 @@ Email:
 
 > Please cite any forms of information source that you have consulted during finishing your assignment, except the TacOS documentation, course slides, and course staff.
 
+I got the advise 
+1) to implement syscall to pass args-none case 
+2) to start from a new branch
+from Yuyang Hu 22, EECS.
+
 > With any comments that may help TAs to evaluate your work better, please leave them here
 
 ## Argument Passing

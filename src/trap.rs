@@ -1,6 +1,7 @@
 //! Trap handler
 //!
 
+pub mod fscall;
 mod pagefault;
 mod syscall;
 
