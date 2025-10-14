@@ -115,6 +115,10 @@ impl Seek for File {
 }
 
 impl File {
+    pub fn fstat(&self) -> (usize, usize) {
+        (self.vnode.inum(), self.vnode.len())
+    }
+
     pub fn new(vnode: Arc<dyn Vnode>) -> Self {
         Self {
             vnode,

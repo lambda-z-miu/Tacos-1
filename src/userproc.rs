@@ -15,7 +15,7 @@ use riscv::register::sstatus;
 use crate::fs::File;
 use crate::mem::pagetable::KernelPgTable;
 use crate::sync::sleep;
-use crate::thread::{self, current, Thread};
+use crate::thread::{self, current, Status, Thread};
 use crate::trap::{trap_exit_u, Frame};
 
 pub struct UserProc {
@@ -151,13 +151,14 @@ pub fn exit(_value: isize) -> ! {
 /// - `Some(exit_value)`
 /// - `None`: if tid was not created by the current thread.
 use thread::sleep;
-pub fn wait(_tid: isize) -> Option<isize> {
+pub fn wait(tid: isize) -> Option<isize> {
     // TODO: Lab2.
     // sleep(100);
+    kprintln!("WAITCALLED");
     let list = current().children.lock().clone();
     let mut found: Option<Arc<Thread>> = None;
     for i in list.clone().into_iter() {
-        if i.id() == _tid {
+        if i.id() == tid && i.status() != Status::Dying {
             found = Some(i.clone());
             break;
         }

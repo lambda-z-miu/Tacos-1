@@ -40,6 +40,13 @@ fn c_str_to_string(c_string: *const u8) -> String {
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
     let id = match _id {
+        SYS_READ => {
+            kprintln!("RHC {} {} {}", args[0], args[1], args[2]);
+            fscall::read_handler(args[0] as u32, args[1] as *mut u8, args[2])
+        }
+
+        SYS_WRITE => fscall::write_handler(args[0] as u32, args[1] as *const u8, args[2]),
+
         SYS_HALT => sbi::shutdown(),
 
         SYS_EXIT => userproc::exit(args[0] as isize),
@@ -58,18 +65,25 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
             ret_code
         }
 
-        /*
         SYS_EXEC => {
             let path_str = c_str_to_string(args[0] as *const u8);
+            kprintln!("EXECHC {}", path_str);
             let argv = parse_arg(args[1] as *const *const u8);
             fscall::exec_handler(path_str, argv)
-        }*/
-        SYS_WAIT => userproc::wait(args[0] as isize).unwrap_or(-1),
+        }
+
+        SYS_WAIT => {
+            kprintln!("WAITCALLED");
+            userproc::wait(args[0] as isize).unwrap_or(-1)
+        }
 
         SYS_CLOSE => fscall::close_handler(args[0] as u32),
 
+        SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
+
         _ => {
             kprintln!("unexpected syscall id: {}", _id);
+            kprintln!("args {} {} {}", args[0], args[1], args[2]);
             -1
         }
     };
@@ -78,18 +92,18 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
 }
 
 fn parse_arg(argv: *const *const u8) -> Vec<String> {
-    let mut args = Vec::new();
+    let mut args: Vec<String> = Vec::new();
     if argv.is_null() {
         return args;
     }
+
     unsafe {
-        let strptr = argv;
-        while !strptr.is_null() {
-            let charptr = *strptr;
-            let mut string = String::new();
-            string = c_str_to_string(charptr);
-            args.push(string);
-            strptr.add(1);
+        let mut strptr = argv;
+        while !(*strptr).is_null() {
+            let string = c_str_to_string(*strptr);
+            args.push(string.clone());
+            kprintln!("!!{}", string.clone());
+            strptr = strptr.add(1);
         }
     }
     args
