@@ -124,6 +124,11 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         None => kprintln!("No PTE found!"),
     };
 
+    // activate old proc_pt
+    if let Some(proc_pt) = thread::current().pagetable.as_ref() {
+        proc_pt.lock().activate();
+    }
+
     thread::Builder::new(move || start(frame))
         .pagetable(pt)
         .userproc(userproc)
