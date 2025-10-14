@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 use crate::fs::disk;
-use crate::trap::fscall::{self, Flags};
+use crate::trap::fscall;
 use crate::{fs, sbi};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -41,7 +41,7 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
     let id = match _id {
         SYS_READ => {
-            kprintln!("RHC {} {} {}", args[0], args[1], args[2]);
+            // kprintln!("RHC {} {} {}", args[0], args[1], args[2]);
             fscall::read_handler(args[0] as u32, args[1] as *mut u8, args[2])
         }
 
@@ -57,9 +57,7 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
             if args[0] != 0 {
                 let path = c_str_to_string(args[0] as *const u8);
                 if path != "".to_string() {
-                    // kprintln!("DEBUG:SYSOPEN {} {}", path, args[1]);
-                    let flag = Flags { flag: args[1] };
-                    ret_code = fscall::open_handler(path, flag);
+                    ret_code = fscall::open_handler(path, args[1] as usize);
                 }
             }
             ret_code
@@ -67,18 +65,18 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
 
         SYS_EXEC => {
             let path_str = c_str_to_string(args[0] as *const u8);
-            kprintln!("EXECHC {}", path_str);
+            // kprintln!("EXECHC {}", path_str);
             let argv = parse_arg(args[1] as *const *const u8);
             fscall::exec_handler(path_str, argv)
         }
 
         SYS_WAIT => {
-            kprintln!("WAITCALLED");
+            // kprintln!("WAITCALLED");
             userproc::wait(args[0] as isize).unwrap_or(-1)
         }
 
         SYS_CLOSE => fscall::close_handler(args[0] as u32),
-
+        SYS_SEEK => fscall::seek_handler(args[0] as u32, args[1] as u32),
         SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
 
         _ => {
@@ -102,7 +100,7 @@ fn parse_arg(argv: *const *const u8) -> Vec<String> {
         while !(*strptr).is_null() {
             let string = c_str_to_string(*strptr);
             args.push(string.clone());
-            kprintln!("!!{}", string.clone());
+            // kprintln!("!!{}", string.clone());
             strptr = strptr.add(1);
         }
     }

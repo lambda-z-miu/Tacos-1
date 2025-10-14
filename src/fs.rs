@@ -119,6 +119,10 @@ impl File {
         (self.vnode.inum(), self.vnode.len())
     }
 
+    pub fn set_pos(&mut self, set_pos: u32) {
+        self.pos = set_pos as usize;
+    }
+
     pub fn new(vnode: Arc<dyn Vnode>) -> Self {
         Self {
             vnode,

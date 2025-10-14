@@ -1,5 +1,6 @@
 //! Implementation of kernel threads
 
+use crate::trap::flags::FdFlags;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
@@ -41,7 +42,7 @@ pub struct Thread {
     pub exit_code: Mutex<Option<isize>>,
     pub children: Mutex<Vec<Arc<Thread>>>,
     pub completed: Semaphore,
-    pub fd: Mutex<BTreeMap<u32, File>>,
+    pub fd: Mutex<BTreeMap<u32, (File, FdFlags)>>,
 }
 
 impl Thread {
