@@ -8,7 +8,7 @@
 
 static void try_write(void) {
     int fd;
-    char buffer[19];
+    char buffer[19] = "123456789012345678";
 
     assert((fd = open("child-rox", O_WRONLY)) > 2);
     assert(write(fd, buffer, sizeof buffer) == -1, "\"child-rox\" is not writable");

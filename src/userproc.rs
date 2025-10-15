@@ -64,11 +64,9 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     // Here the new process will be created.
 
     //
-    let userproc = UserProc::new(file);
+    let mut userproc = UserProc::new(file);
 
     // TODO: (Lab2) Pass arguments to user program
-
-    kprintln!("DEBUG: frame.sepc {}", frame.sepc);
 
     pt.activate();
 
@@ -109,11 +107,12 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         *(index as *mut *mut u8) = null_mut();
     }
 
-    kprintln!("MOVED ARGV");
+    // kprintln!("MOVED ARGV");
     frame.x[10] = argc; // first arg reg
     frame.x[11] = argv_base as usize;
     frame.x[2] = argv_base as usize;
 
+    /*
     match pt.get_pte(frame.sepc) {
         Some(x) => x.print(),
         None => kprintln!("No PTE found!"),
@@ -122,7 +121,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     match pt.get_pte(0) {
         Some(x) => x.print(),
         None => kprintln!("No PTE found!"),
-    };
+    };*/
 
     // activate old proc_pt
     if let Some(proc_pt) = thread::current().pagetable.as_ref() {
@@ -145,7 +144,7 @@ pub fn exit(_value: isize) -> ! {
     } else {
         current().completed.up();
         current().exit_code.lock().replace(_value);
-        kprintln!("process exited with exit code {}", _value);
+        // kprintln!("process exited with exit code {}", _value);
     }
     thread::exit();
 }
@@ -158,8 +157,7 @@ pub fn exit(_value: isize) -> ! {
 use thread::sleep;
 pub fn wait(tid: isize) -> Option<isize> {
     // TODO: Lab2.
-    // sleep(100);
-    kprintln!("WAITCALLED");
+    // kprintln!("WAITCALLED");
     let list = current().children.lock().clone();
     let mut found: Option<Arc<Thread>> = None;
     for i in list.clone().into_iter() {
@@ -173,7 +171,7 @@ pub fn wait(tid: isize) -> Option<isize> {
     if let Some(thread) = found {
         thread.completed.down();
         exit_code_get = thread.exit_code.lock().clone();
-        kprintln!("exited with {}", thread.exit_code.lock().unwrap_or(17))
+        // kprintln!("exited with {}", thread.exit_code.lock().unwrap_or(17))
     }
 
     exit_code_get
@@ -188,7 +186,6 @@ pub fn start(mut frame: Frame) -> ! {
 
     // Set kernel stack pointer to intr frame and then jump to `trap_exit_u()`.
     let kernal_sp = (&frame as *const Frame) as usize;
-    kprintln!("user will start at {}", frame.sepc);
 
     unsafe {
         asm!(

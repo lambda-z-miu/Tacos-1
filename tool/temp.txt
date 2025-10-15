@@ -1,99 +1,77 @@
-Running multi-recurse ... PASSED
-Running boundary-bad ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m51 ms[0m] Executing command boundary-bad
-[[38;2;129;165;113;1m71 ms[0m] DEBUG: frame.sepc 5708
-[[38;2;129;165;113;1m72 ms[0m] MOVED ARGV
-[[38;2;129;165;113;1m72 ms[0m] 2084001b
-[[38;2;129;165;113;1m73 ms[0m] 0
-[[38;2;129;165;113;1m73 ms[0m] WAITCALLED
-[[38;2;129;165;113;1m73 ms[0m] user will start at 5708
-[[38;2;129;165;113;1m74 ms[0m] Page fault at 0x5000: not present error reading page in kernel context.
-[[38;2;129;165;113;1m74 ms[0m] panicked at src/trap/pagefault.rs:52:17:
-Kernel page fault
-Running write-badfd ... PASSED
-Running close-twice ... PASSED
-Running bad-store ... PASSED
-Running bad-jump2 ... PASSED
-Running open-invalid ... PASSED
+Running boundary-normal ... PASSED
+Running write-normal ... PASSED
+Running sc-bad-sp ... PASSED
+Running wait-twice ... PASSED
 Running args-many ... PASSED
+Running rox-multichild ... FAILED
+STDOUT:
+[[38;2;129;165;113;1m221 ms[0m] Flag=1
+[[38;2;129;165;113;1m228 ms[0m] OPENED_EXISTED fd: 3
+[[38;2;129;165;113;1m228 ms[0m] Flag=1
+[[38;2;129;165;113;1m235 ms[0m] OPENED_EXISTED fd: 3
+[[38;2;129;165;113;1m235 ms[0m] Flag=1
+[[38;2;129;165;113;1m243 ms[0m] OPENED_EXISTED fd: 3
+[[38;2;129;165;113;1m246 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running open-many ... PASSED
+Running read-normal ... PASSED
+Running exec-multiple ... PASSED
+Running halt ... FAILED
+STDOUT:
+Boot HART ISA Extensions  : zicntr
+Boot HART PMP Count       : 16
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m32 ms[0m] Hello, World!
+[[38;2;129;165;113;1m57 ms[0m] Executing command halt
+Running bad-jump2 ... PASSED
+Running close-twice ... PASSED
+Running wait-simple ... PASSED
+Running bad-load ... PASSED
+Running open-create ... PASSED
+Running exit ... PASSED
+Running args-none ... PASSED
+Running open-invalid ... PASSED
+Running multi-recurse ... PASSED
+Running read-zero ... PASSED
+Running exec-arg ... PASSED
+Running bad-jump ... PASSED
 Running bad-load2 ... PASSED
 Running exec-once ... PASSED
 Running open-rdwr ... PASSED
+Running write-badfd ... PASSED
 Running read-stdout ... PASSED
-Running write-normal ... PASSED
-Running exec-invalid ... PASSED
-Running open-create ... PASSED
-Running sc-bad-args ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m97 ms[0m] MOVED ARGV
-[[38;2;129;165;113;1m97 ms[0m] 2084001b
-[[38;2;129;165;113;1m97 ms[0m] 0
-[[38;2;129;165;113;1m98 ms[0m] WAITCALLED
-[[38;2;129;165;113;1m98 ms[0m] user will start at 6708
-[[38;2;129;165;113;1m99 ms[0m] Flag=2
-[[38;2;129;165;113;1m100 ms[0m] OPENED:EXISTED 3
-[[38;2;129;165;113;1m101 ms[0m] Page fault at 0xbad: not present error reading page in kernel context.
-[[38;2;129;165;113;1m102 ms[0m] panicked at src/trap/pagefault.rs:52:17:
-Kernel page fault
-Running wait-killed ... PASSED
-Running bad-load ... PASSED
-Running boundary-normal ... PASSED
-Running exec-arg ... PASSED
-Running args-none ... PASSED
-Running open-trunc ... PASSED
 Running read-badfd ... PASSED
-Running exit ... PASSED
-Running bad-store2 ... PASSED
-Running exec-multiple ... PASSED
-Running bad-jump ... PASSED
-Running write-zero ... PASSED
-Running wait-twice ... PASSED
-Running write-stdin ... PASSED
-Running close-badfd ... PASSED
-Running open-many ... PASSED
-Running halt ... FAILED
-STDOUT:
-,[[38;2;129;165;113;1m87 ms[0m] 
- [[38;2;129;165;113;1m87 ms[0m] 
-W[[38;2;129;165;113;1m87 ms[0m] 
-o[[38;2;129;165;113;1m87 ms[0m] 
-r[[38;2;129;165;113;1m87 ms[0m] 
-l[[38;2;129;165;113;1m87 ms[0m] 
-d[[38;2;129;165;113;1m87 ms[0m] 
-![[38;2;129;165;113;1m87 ms[0m] 
-
-[[38;2;129;165;113;1m88 ms[0m] 
-Running rox-multichild ... FAILED
-STDOUT:
-2[[38;2;129;165;113;1m479 ms[0m] 
-9[[38;2;129;165;113;1m480 ms[0m] 
-
-[[38;2;129;165;113;1m480 ms[0m] 
-[[38;2;129;165;113;1m480 ms[0m] process exited with exit code 12345
-[[38;2;129;165;113;1m480 ms[0m] exited with 12345
-[[38;2;129;165;113;1m480 ms[0m] panicked at src/../test/user.rs:39:9:
-assertion `left == right` failed
-  left: 12345
- right: 0
-Running rox-simple ... PASSED
-Running read-zero ... PASSED
+Running open-trunc ... PASSED
 Running close-stdio ... PASSED
-Running wait-simple ... PASSED
-Running close-normal ... PASSED
-Running read-normal ... PASSED
+Running wait-killed ... PASSED
+Running wait-badpid ... PASSED
+Running bad-store ... PASSED
 Running rox-child ... FAILED
 STDOUT:
-2[[38;2;129;165;113;1m182 ms[0m] 
-9[[38;2;129;165;113;1m182 ms[0m] 
-
-[[38;2;129;165;113;1m182 ms[0m] 
-[[38;2;129;165;113;1m182 ms[0m] process exited with exit code 12345
-[[38;2;129;165;113;1m182 ms[0m] exited with 12345
-[[38;2;129;165;113;1m183 ms[0m] panicked at src/../test/user.rs:39:9:
+[[38;2;129;165;113;1m93 ms[0m] read 16 chars
+[[38;2;129;165;113;1m94 ms[0m] WRITECALLED 16
+[[38;2;129;165;113;1m109 ms[0m] Flag=1
+[[38;2;129;165;113;1m118 ms[0m] OPENED_EXISTED fd: 3
+[[38;2;129;165;113;1m119 ms[0m] Flag=1
+[[38;2;129;165;113;1m126 ms[0m] OPENED_EXISTED fd: 3
+[[38;2;129;165;113;1m127 ms[0m] panicked at src/../test/user.rs:39:9:
 assertion `left == right` failed
   left: 12345
  right: 0
-Running sc-bad-sp ... PASSED
-Running wait-badpid ... PASSED
-GRADE: 87/100
+Running exec-invalid ... PASSED
+Running sc-bad-args ... PASSED
+Running write-stdin ... PASSED
+Running bad-store2 ... PASSED
+Running close-badfd ... PASSED
+Running boundary-bad ... PASSED
+Running write-zero ... PASSED
+Running rox-simple ... PASSED
+Running close-normal ... PASSED
+GRADE: 94/100

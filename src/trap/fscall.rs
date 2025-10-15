@@ -2,18 +2,42 @@ use crate::trap::flags::FdFlags;
 use core::i32;
 use core::slice::{from_raw_parts, from_raw_parts_mut};
 
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use riscv::register::fcsr::Flag;
 
 use crate::fs::disk::Path;
 use crate::io::{Read, Write};
 use crate::{fs::*, thread::current};
 use crate::{thread, userproc};
+use alloc::vec::Vec;
+use core::ffi::CStr;
 use core::ptr;
 
-pub fn exec_handler(path: String, argv: alloc::vec::Vec<String>) -> isize {
-    if disk::Path::exists(disk::Path::from(&path as &str)) {
-        let file = disk::DISKFS.open(disk::Path::from(&path as &str));
+fn check_ptr_valid(va: usize) -> bool {
+    // kprintln!("CHECKVALID CALLED at {}", va);
+    let thread = current();
+    let pt_ref = thread.pagetable.as_ref().unwrap().lock();
+    let ptentry = pt_ref.get_pte(va);
+    if ptentry.is_none() || !ptentry.unwrap().is_valid() {
+        return false;
+    }
+    return true;
+}
+
+pub fn exec_handler(args0: usize, args1: usize) -> isize {
+    if !check_str_valid(args0 as *const u8) {
+        return -1;
+    }
+    if args1 as usize % 8 != 0 {
+        // align-8
+        return -1;
+    }
+
+    let path_str = c_str_to_string(args0 as *const u8);
+    let argv = parse_arg(args1 as *const *const u8);
+
+    if disk::Path::exists(disk::Path::from(&path_str as &str)) {
+        let file = disk::DISKFS.open(disk::Path::from(&path_str as &str));
         if let Ok(file) = file {
             return userproc::execute(file, argv);
         }
@@ -28,6 +52,9 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> isize {
     }
     if len == 0 {
         return 0; //zero reading is permited
+    }
+    if !check_str_valid(buf as *const u8) {
+        return -1;
     }
 
     let thread = current();
@@ -56,21 +83,29 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> isize {
 }
 
 pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> isize {
+    if !check_str_valid(buf as *const u8) {
+        kprintln!("F1");
+        return -1;
+    }
+
     //DEBUG:
+    /*
     let i = buf;
     for j in 0..len {
         unsafe {
             kprint!("{}", (*i.wrapping_add(j)) as char);
         }
-    }
-    kprintln!("");
+    }*/
+    // kprintln!("");
     //---------------------------------------------------
 
     //special cases
     if fd == 0 {
+        //kprintln!("F2");
         return -1; // cannot write in
     }
     if len == 0 {
+        //kprintln!("F3");
         return 0; //zero reading is permited
     }
 
@@ -95,6 +130,7 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> isize {
             return ret;
         }
     }
+    //kprintln!("F5");
     return -1;
 }
 
@@ -104,6 +140,10 @@ pub struct Fstat {
 }
 
 pub fn fstat_handler(fd: u32, buf: *mut Fstat) -> isize {
+    if !check_str_valid(buf as *const u8) {
+        return -1;
+    }
+
     let thread = current();
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get_mut(&fd);
@@ -122,9 +162,18 @@ pub fn fstat_handler(fd: u32, buf: *mut Fstat) -> isize {
     return -1;
 }
 
-pub fn open_handler(path: String, flag: usize) -> isize {
+pub fn open_handler(path: usize, flag: usize) -> isize {
     let fdflag = FdFlags { flag: flag };
     kprintln!("Flag={}", flag);
+
+    if !check_str_valid(path as *const u8) {
+        return -1;
+    }
+    let path = c_str_to_string(path as *const u8);
+
+    if path == "".to_string() {
+        return -1;
+    }
 
     let path_sys: disk::Path = disk::Path::from(&path as &str);
     if disk::Path::exists(disk::Path::from(&path as &str)) {
@@ -132,7 +181,7 @@ pub fn open_handler(path: String, flag: usize) -> isize {
         if let Ok(file_opened) = disk::DISKFS.open(path_sys) {
             // opened file
             let new_fd = current().get_fresh_fd();
-            kprintln!("OPENED:EXISTED {}", new_fd);
+            kprintln!("OPENED_EXISTED fd: {}", new_fd);
             let thread = current();
             let mut fd_map = thread.fd.lock();
             fd_map.insert(new_fd, (file_opened, fdflag));
@@ -149,7 +198,7 @@ pub fn open_handler(path: String, flag: usize) -> isize {
                 let thread = current();
                 let mut fd_map = thread.fd.lock();
                 fd_map.insert(new_fd, (file_opened, fdflag));
-                kprintln!("OPENED:CREATED {}", new_fd);
+                // kprintln!("OPENED_CREATED fd: {}", new_fd);
                 return new_fd as isize;
             } else {
                 // unable to create file
@@ -186,4 +235,47 @@ pub fn seek_handler(fd: u32, pos: u32) -> isize {
         file.0.set_pos(pos);
     }
     return -1;
+}
+
+fn check_str_valid(ptr: *const u8) -> bool {
+    let mut cur = ptr;
+    while true {
+        if !check_ptr_valid(cur as usize) {
+            return false;
+        }
+        unsafe {
+            if (*cur) == '\0' as u8 {
+                return true;
+            }
+        }
+        cur = cur.wrapping_add(1);
+    }
+    unreachable!();
+}
+
+fn c_str_to_string(c_string: *const u8) -> String {
+    unsafe {
+        let c_str = CStr::from_ptr(c_string);
+        let bytes = c_str.to_bytes();
+        let rust_str = str::from_utf8_unchecked(bytes);
+        String::from(rust_str)
+    }
+}
+
+fn parse_arg(argv: *const *const u8) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
+    if argv.is_null() {
+        return args;
+    }
+
+    unsafe {
+        let mut strptr = argv;
+        while !(*strptr).is_null() {
+            let string = c_str_to_string(*strptr);
+            args.push(string.clone());
+            // kprintln!("!!{}", string.clone());
+            strptr = strptr.add(1);
+        }
+    }
+    args
 }

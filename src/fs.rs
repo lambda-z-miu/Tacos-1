@@ -7,7 +7,7 @@ pub mod inmem;
 use alloc::sync::Arc;
 
 use crate::io::{Read, Seek, Write};
-use crate::sync::Mutex;
+use crate::sync::{Lock, Mutex, Semaphore};
 use crate::Result;
 
 /* -------------------------------------------------------------------------- */

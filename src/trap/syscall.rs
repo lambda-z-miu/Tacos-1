@@ -8,7 +8,6 @@ use crate::trap::fscall;
 use crate::{fs, sbi};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::ffi::CStr;
 use userproc;
 
 /* -------------------------------------------------------------------------- */
@@ -28,17 +27,16 @@ const SYS_TELL: usize = 10;
 const SYS_CLOSE: usize = 11;
 const SYS_FSTAT: usize = 12;
 
-fn c_str_to_string(c_string: *const u8) -> String {
-    unsafe {
-        let c_str = CStr::from_ptr(c_string);
-        let bytes = c_str.to_bytes();
-        let rust_str = str::from_utf8_unchecked(bytes);
-        String::from(rust_str)
-    }
-}
-
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
+    /*
+    kprintln!(
+        "handler called 0x{:x} 0x{:x} 0x{:x} 0x{:x}",
+        _id,
+        args[0],
+        args[1],
+        args[2]
+    );*/
     let id = match _id {
         SYS_READ => {
             // kprintln!("RHC {} {} {}", args[0], args[1], args[2]);
@@ -51,32 +49,16 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
 
         SYS_EXIT => userproc::exit(args[0] as isize),
 
-        SYS_OPEN => {
-            // kprintln!("OHC {} {}", args[0], args[1]);
-            let mut ret_code = -1;
-            if args[0] != 0 {
-                let path = c_str_to_string(args[0] as *const u8);
-                if path != "".to_string() {
-                    ret_code = fscall::open_handler(path, args[1] as usize);
-                }
-            }
-            ret_code
-        }
+        SYS_OPEN => fscall::open_handler(args[0], args[1]),
 
-        SYS_EXEC => {
-            let path_str = c_str_to_string(args[0] as *const u8);
-            // kprintln!("EXECHC {}", path_str);
-            let argv = parse_arg(args[1] as *const *const u8);
-            fscall::exec_handler(path_str, argv)
-        }
+        SYS_EXEC => fscall::exec_handler(args[0], args[1]),
 
-        SYS_WAIT => {
-            // kprintln!("WAITCALLED");
-            userproc::wait(args[0] as isize).unwrap_or(-1)
-        }
+        SYS_WAIT => userproc::wait(args[0] as isize).unwrap_or(-1),
 
         SYS_CLOSE => fscall::close_handler(args[0] as u32),
+
         SYS_SEEK => fscall::seek_handler(args[0] as u32, args[1] as u32),
+
         SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
 
         _ => {
@@ -87,22 +69,4 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     };
     sbi::interrupt::set(old);
     id
-}
-
-fn parse_arg(argv: *const *const u8) -> Vec<String> {
-    let mut args: Vec<String> = Vec::new();
-    if argv.is_null() {
-        return args;
-    }
-
-    unsafe {
-        let mut strptr = argv;
-        while !(*strptr).is_null() {
-            let string = c_str_to_string(*strptr);
-            args.push(string.clone());
-            // kprintln!("!!{}", string.clone());
-            strptr = strptr.add(1);
-        }
-    }
-    args
 }
