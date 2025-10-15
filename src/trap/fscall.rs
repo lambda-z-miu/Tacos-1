@@ -1,3 +1,4 @@
+use crate::sync::Lock;
 use crate::trap::flags::FdFlags;
 use core::i32;
 use core::slice::{from_raw_parts, from_raw_parts_mut};
@@ -8,10 +9,11 @@ use riscv::register::fcsr::Flag;
 use crate::fs::disk::Path;
 use crate::io::{Read, Write};
 use crate::{fs::*, thread::current};
-use crate::{thread, userproc};
+use crate::{sbi, thread, userproc};
 use alloc::vec::Vec;
 use core::ffi::CStr;
 use core::ptr;
+use core::sync::atomic::Ordering::SeqCst;
 
 fn check_ptr_valid(va: usize) -> bool {
     // kprintln!("CHECKVALID CALLED at {}", va);
@@ -46,6 +48,7 @@ pub fn exec_handler(args0: usize, args1: usize) -> isize {
 }
 
 pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> isize {
+    // TODO: HOW to read stdin?
     //special cases
     if fd == 1 {
         return -1; // cannot read stdout
@@ -86,6 +89,19 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> isize {
     if !check_str_valid(buf as *const u8) {
         kprintln!("F1");
         return -1;
+    }
+
+    if fd == 1 || fd == 2 {
+        //kprintln!("called");
+
+        let i = buf;
+        for j in 0..len {
+            unsafe {
+                kprint!("{}", (*i.wrapping_add(j)) as char);
+            }
+        }
+        // kprintln!("");
+        // sbi::console_putchar(buf as usize);
     }
 
     //DEBUG:

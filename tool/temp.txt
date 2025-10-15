@@ -1,77 +1,44 @@
-Running boundary-normal ... PASSED
 Running write-normal ... PASSED
-Running sc-bad-sp ... PASSED
-Running wait-twice ... PASSED
-Running args-many ... PASSED
-Running rox-multichild ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m221 ms[0m] Flag=1
-[[38;2;129;165;113;1m228 ms[0m] OPENED_EXISTED fd: 3
-[[38;2;129;165;113;1m228 ms[0m] Flag=1
-[[38;2;129;165;113;1m235 ms[0m] OPENED_EXISTED fd: 3
-[[38;2;129;165;113;1m235 ms[0m] Flag=1
-[[38;2;129;165;113;1m243 ms[0m] OPENED_EXISTED fd: 3
-[[38;2;129;165;113;1m246 ms[0m] panicked at src/../test/user.rs:39:9:
-assertion `left == right` failed
-  left: 12345
- right: 0
-Running open-many ... PASSED
-Running read-normal ... PASSED
-Running exec-multiple ... PASSED
-Running halt ... FAILED
-STDOUT:
-Boot HART ISA Extensions  : zicntr
-Boot HART PMP Count       : 16
-Boot HART PMP Granularity : 2 bits
-Boot HART PMP Address Bits: 54
-Boot HART MHPM Info       : 0 (0x00000000)
-Boot HART Debug Triggers  : 0 triggers
-Boot HART MIDELEG         : 0x0000000000001666
-Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m32 ms[0m] Hello, World!
-[[38;2;129;165;113;1m57 ms[0m] Executing command halt
-Running bad-jump2 ... PASSED
-Running close-twice ... PASSED
-Running wait-simple ... PASSED
-Running bad-load ... PASSED
-Running open-create ... PASSED
-Running exit ... PASSED
-Running args-none ... PASSED
-Running open-invalid ... PASSED
-Running multi-recurse ... PASSED
-Running read-zero ... PASSED
-Running exec-arg ... PASSED
-Running bad-jump ... PASSED
-Running bad-load2 ... PASSED
-Running exec-once ... PASSED
-Running open-rdwr ... PASSED
-Running write-badfd ... PASSED
-Running read-stdout ... PASSED
-Running read-badfd ... PASSED
-Running open-trunc ... PASSED
-Running close-stdio ... PASSED
-Running wait-killed ... PASSED
-Running wait-badpid ... PASSED
-Running bad-store ... PASSED
-Running rox-child ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m93 ms[0m] read 16 chars
-[[38;2;129;165;113;1m94 ms[0m] WRITECALLED 16
-[[38;2;129;165;113;1m109 ms[0m] Flag=1
-[[38;2;129;165;113;1m118 ms[0m] OPENED_EXISTED fd: 3
-[[38;2;129;165;113;1m119 ms[0m] Flag=1
-[[38;2;129;165;113;1m126 ms[0m] OPENED_EXISTED fd: 3
-[[38;2;129;165;113;1m127 ms[0m] panicked at src/../test/user.rs:39:9:
-assertion `left == right` failed
-  left: 12345
- right: 0
 Running exec-invalid ... PASSED
-Running sc-bad-args ... PASSED
-Running write-stdin ... PASSED
-Running bad-store2 ... PASSED
+Running read-badfd ... PASSED
+Running boundary-normal ... PASSED
 Running close-badfd ... PASSED
+Running wait-killed ... PASSED
+Running bad-store2 ... PASSED
+Running exec-once ... PASSED
+Running write-stdin ... PASSED
+Running open-create ... PASSED
+Running open-invalid ... PASSED
+Running close-stdio ... PASSED
+Running open-many ... PASSED
+Running rox-multichild ... PASSED
+Running exec-arg ... PASSED
+Running args-many ... PASSED
+Running read-zero ... PASSED
+Running write-badfd ... PASSED
+Running wait-twice ... PASSED
+Running args-none ... PASSED
+Running read-stdout ... PASSED
+Running bad-store ... PASSED
 Running boundary-bad ... PASSED
+Running exit ... PASSED
+Running bad-jump ... PASSED
+Running wait-simple ... PASSED
+Running sc-bad-sp ... PASSED
 Running write-zero ... PASSED
-Running rox-simple ... PASSED
+Running close-twice ... PASSED
+Running open-rdwr ... PASSED
+Running open-trunc ... PASSED
+Running halt ... PASSED
+Running bad-load ... PASSED
+Running bad-jump2 ... PASSED
+Running read-normal ... PASSED
+Running sc-bad-args ... PASSED
+Running rox-child ... PASSED
+Running multi-recurse ... PASSED
+Running exec-multiple ... PASSED
+Running bad-load2 ... PASSED
 Running close-normal ... PASSED
-GRADE: 94/100
+Running wait-badpid ... PASSED
+Running rox-simple ... PASSED
+GRADE: 100/100

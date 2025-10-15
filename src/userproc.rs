@@ -14,9 +14,10 @@ use riscv::register::sstatus;
 
 use crate::fs::File;
 use crate::mem::pagetable::KernelPgTable;
-use crate::sync::sleep;
+use crate::sync::{sleep, Lock};
 use crate::thread::{self, current, Status, Thread};
 use crate::trap::{trap_exit_u, Frame};
+use core::sync::atomic::Ordering::SeqCst;
 
 pub struct UserProc {
     #[allow(dead_code)]
@@ -62,9 +63,6 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     frame.x[2] = exec_info.init_sp;
 
     // Here the new process will be created.
-
-    //
-    let mut userproc = UserProc::new(file);
 
     // TODO: (Lab2) Pass arguments to user program
 
@@ -128,6 +126,8 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         proc_pt.lock().activate();
     }
 
+    let mut userproc = UserProc::new(file);
+
     thread::Builder::new(move || start(frame))
         .pagetable(pt)
         .userproc(userproc)
@@ -144,6 +144,7 @@ pub fn exit(_value: isize) -> ! {
     } else {
         current().completed.up();
         current().exit_code.lock().replace(_value);
+        current().userproc.as_ref().unwrap().bin.allow_write()
         // kprintln!("process exited with exit code {}", _value);
     }
     thread::exit();

@@ -7,8 +7,9 @@ pub mod inmem;
 use alloc::sync::Arc;
 
 use crate::io::{Read, Seek, Write};
-use crate::sync::{Lock, Mutex, Semaphore};
+use crate::sync::{Lock, Mutex, Semaphore, Spin};
 use crate::Result;
+use core::sync::atomic::AtomicU32;
 
 /* -------------------------------------------------------------------------- */
 /*                                 File System                                */
@@ -134,6 +135,10 @@ impl File {
     pub fn deny_write(&mut self) {
         self.deny_write = true;
         self.vnode.deny_write();
+    }
+
+    pub fn allow_write(&self) {
+        self.vnode.allow_write();
     }
 }
 
