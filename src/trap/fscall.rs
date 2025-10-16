@@ -65,21 +65,14 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> isize {
     let file = fd_map.get_mut(&fd);
     if let Some(file) = file {
         // fd is valid?
-
-        if !file.1.read_permision() {
-            // no reading permision
-            return -1;
-        }
-
-        unsafe {
-            let size = file.0.read(from_raw_parts_mut(buf, len));
-            if size.is_err() {
-                // cannot read
-                return -1;
+        if file.1.read_permision() {
+            unsafe {
+                let size = file.0.read(from_raw_parts_mut(buf, len));
+                if let Ok(size) = size {
+                    return size as isize;
+                    // kprintln!("read {} chars", ret);
+                }
             }
-            let ret = size.unwrap() as isize;
-            kprintln!("read {} chars", ret);
-            return ret;
         }
     }
     return -1;
@@ -117,11 +110,9 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> isize {
 
     //special cases
     if fd == 0 {
-        //kprintln!("F2");
-        return -1; // cannot write in
+        return -1; // cannot write in stdin
     }
     if len == 0 {
-        //kprintln!("F3");
         return 0; //zero reading is permited
     }
 
@@ -130,23 +121,15 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> isize {
     let file = fd_map.get_mut(&fd);
     if let Some(file) = file {
         // fd is valid?
-        if !file.1.write_permision() {
-            // no write permision
-            kprintln!("NO WR Flag={}", file.1.flag);
-            return -1;
-        }
-        unsafe {
-            let size = file.0.write(from_raw_parts(buf, len));
-            if size.is_err() {
-                // cannot write
-                return -1;
+        if file.1.write_permision() {
+            unsafe {
+                let size = file.0.write(from_raw_parts(buf, len));
+                if let Ok(size) = size {
+                    return size as isize;
+                }
             }
-            let ret = size.unwrap() as isize;
-            kprintln!("WRITECALLED {}", ret);
-            return ret;
         }
     }
-    //kprintln!("F5");
     return -1;
 }
 

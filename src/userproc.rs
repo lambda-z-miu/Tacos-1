@@ -66,6 +66,14 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
 
     // TODO: (Lab2) Pass arguments to user program
 
+    let mut tot_len = argv.len() * 8 + 8;
+    for t in &argv {
+        tot_len += t.len();
+    }
+    if tot_len > 4096 {
+        panic!("TOO LONG ARGUMENT");
+    }
+
     pt.activate();
 
     let user_stack = frame.x[2];
@@ -172,6 +180,7 @@ pub fn wait(tid: isize) -> Option<isize> {
     if let Some(thread) = found {
         thread.completed.down();
         exit_code_get = thread.exit_code.lock().clone();
+        thread.completed.up();
         // kprintln!("exited with {}", thread.exit_code.lock().unwrap_or(17))
     }
 
