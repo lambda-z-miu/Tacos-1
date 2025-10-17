@@ -141,7 +141,6 @@ void check_file_handle(int fd, const char* file_name, const void* buf_, size_t s
        file. */
     stat s;
     fstat(fd, &s);
-    printf("fsize as offset: %d",(char*)(&s.size) -(char*)&s);
     if (s.size != size)
         printf("size of %s (%d) differs from expected (%d)", file_name, s.size, size);
 

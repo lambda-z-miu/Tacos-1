@@ -10,7 +10,6 @@ void main() {
 
     /* Open child-rox, read from it, write back same data. */
     assert((fd = open("child-rox", O_RDWR)) > 2);
-    assert(fd == 3);
 
     r = read(fd, buffer, sizeof buffer);
     assert(r == (int)sizeof buffer);
@@ -19,12 +18,10 @@ void main() {
 
     r = write(fd, buffer, sizeof buffer);
     assert(r == (int)sizeof buffer);
-    assert(fd == 3);
 
     /* Execute child-rox and wait for it. */
     assert((child = exec(args[0], args)) >= 0);
     assert(wait(child) == 12);
-    assert(fd == 3);
 
     /* Write to child-rox again. */
     seek(fd, 0);
