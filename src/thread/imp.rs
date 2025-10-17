@@ -1,5 +1,6 @@
 //! Implementation of kernel threads
 
+use crate::fs::disk::{DiskFs, DISKFS};
 use crate::trap::flags::FdFlags;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
@@ -8,6 +9,7 @@ use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::fmt::{self, Debug};
 use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
+use fs::FileSys;
 
 use crate::fs::File;
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
@@ -104,6 +106,12 @@ impl Thread {
 
     pub fn overflow(&self) -> bool {
         unsafe { (self.stack as *const usize).read() != MAGIC }
+    }
+
+    pub fn clean_fd(&self) {
+        for i in self.fd.lock().iter() {
+            DISKFS.close(i.1 .0.clone());
+        }
     }
 }
 

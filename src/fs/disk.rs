@@ -181,7 +181,9 @@ impl FileSys for DiskFs {
         Ok(File::new(vnode))
     }
 
-    fn close(&self, _file: super::File) {}
+    fn close(&self, file: super::File) {
+        file.vnode.close();
+    }
 
     fn remove(&self, id: Self::Path) -> Result<()> {
         let inum = self.root_dir.lock().path2inum(&id)?;

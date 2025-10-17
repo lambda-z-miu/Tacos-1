@@ -12,7 +12,7 @@ use core::mem::{size_of, MaybeUninit};
 use ptr::*;
 use riscv::register::sstatus;
 
-use crate::fs::File;
+use crate::fs::{self, File};
 use crate::mem::pagetable::KernelPgTable;
 use crate::sync::{sleep, Lock};
 use crate::thread::{self, current, Status, Thread};
@@ -147,13 +147,18 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
 /// Panic if the current thread doesn't own a user process.
 pub fn exit(_value: isize) -> ! {
     // TODO: Lab2.
-    if current().userproc.is_none() {
+    let thread = current();
+    if thread.userproc.is_none() {
         panic!("cannot exit with no user process");
     } else {
-        current().completed.up();
-        current().exit_code.lock().replace(_value);
-        current().userproc.as_ref().unwrap().bin.allow_write()
-        // kprintln!("process exited with exit code {}", _value);
+        thread.completed.up();
+        thread.exit_code.lock().replace(_value);
+        thread.userproc.as_ref().unwrap().bin.allow_write();
+        unsafe {
+            thread.pagetable.as_ref().unwrap().lock().destroy();
+        } // release all memory resources
+        thread.clean_fd(); // release all file descriptor
+                           // kprintln!("process exited with exit code {}", _value);
     }
     thread::exit();
 }
