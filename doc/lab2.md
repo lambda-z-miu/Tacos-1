@@ -102,7 +102,7 @@ Every thread maintains a completed filed. It is a semaphore with initial value 0
 
 > B6: Any access to user program memory at a user-specified address can fail due to a bad pointer value.  Such accesses must cause th process to be terminated.  System calls are fraught with such accesses, e.g. a "write" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point.  This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling?  Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed? Have you used some features in Rust, to make these things easier than in C? In a few paragraphs, describe the strategy or strategies you adopted for managing these issues.  Give an example.
 
-!!! I used C style error handling. It can be clearly managed if we only focus on cases that returns normal value, and the rest is -1. 
+In rust, the ? operator which can automatically propagate error is useful when handling exceptions. I refactored the wrapped syscall functions using Result<T,E>, which makes the exception handling wrapped in called functions and provides a clear view of the routine cases.
 
 > B7: Briefly describe what will happen if loading the new executable fails. (e.g. the file does not exist, is in the wrong format, or some other error.)
 

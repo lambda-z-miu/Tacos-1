@@ -5,6 +5,7 @@ pub mod flags;
 pub mod fscall;
 mod pagefault;
 mod syscall;
+mod util;
 
 use crate::device::{plic, virtio};
 use crate::sbi;

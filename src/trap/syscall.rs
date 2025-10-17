@@ -38,26 +38,26 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
         args[2]
     );*/
     let id = match _id {
-        SYS_READ => {
-            // kprintln!("RHC {} {} {}", args[0], args[1], args[2]);
-            fscall::read_handler(args[0] as u32, args[1] as *mut u8, args[2])
-        }
-
-        SYS_WRITE => fscall::write_handler(args[0] as u32, args[1] as *const u8, args[2]),
-
         SYS_HALT => sbi::shutdown(),
 
         SYS_EXIT => userproc::exit(args[0] as isize),
 
-        SYS_OPEN => fscall::open_handler(args[0], args[1]),
-
-        SYS_EXEC => fscall::exec_handler(args[0], args[1]),
+        SYS_EXEC => fscall::exec_handler(args[0], args[1]).unwrap_or(-1),
 
         SYS_WAIT => userproc::wait(args[0] as isize).unwrap_or(-1),
 
-        SYS_CLOSE => fscall::close_handler(args[0] as u32),
+        // SYS_REMOVE
+        SYS_OPEN => fscall::open_handler(args[0], args[1]).unwrap_or(-1),
+
+        SYS_READ => fscall::read_handler(args[0] as u32, args[1] as *mut u8, args[2]).unwrap_or(-1),
+
+        SYS_WRITE => {
+            fscall::write_handler(args[0] as u32, args[1] as *const u8, args[2]).unwrap_or(-1)
+        }
 
         SYS_SEEK => fscall::seek_handler(args[0] as u32, args[1] as u32),
+        //SYS_TELL
+        SYS_CLOSE => fscall::close_handler(args[0] as u32).unwrap_or(-1),
 
         SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
 

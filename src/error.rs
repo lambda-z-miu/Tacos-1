@@ -18,4 +18,7 @@ pub enum OsError {
     ArgumentTooLong = -11,
     InvalidFileMode = -12,
     FileNotOpened = -13,
+    UnAlignedAccess = -14,
+    FileNotExist = -15,
+    PermissionDenied = -16,
 }

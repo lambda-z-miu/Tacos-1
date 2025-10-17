@@ -96,7 +96,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         }
     }
 
-    let mut index_aligned: *mut u8 = (index as usize & !7) as *mut u8;
+    let index_aligned: *mut u8 = (index as usize & !7) as *mut u8;
     assert_eq!((index_aligned <= index), true);
     assert_eq!(index_aligned as usize % 8, 0);
     assert_eq!(index <= index_aligned.wrapping_add(7), true);
@@ -134,7 +134,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         proc_pt.lock().activate();
     }
 
-    let mut userproc = UserProc::new(file);
+    let userproc = UserProc::new(file);
 
     thread::Builder::new(move || start(frame))
         .pagetable(pt)
