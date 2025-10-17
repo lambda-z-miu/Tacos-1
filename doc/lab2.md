@@ -15,9 +15,9 @@ I got the advise
 2) to start from a new branch   
 From Yuyang Hu 22, EECS.
 
-> With any comments that may help TAs to evaluate your work better, please leave them here
+I also got advise to debug about page fault with kprintln instead of GDB from Zijuan Peng 22, EECS.
 
-I summarized some bugs I met and mistakes I made in lab-1 in lab1-Myguide.
+> With any comments that may help TAs to evaluate your work better, please leave them here
 
 ## Argument Passing
 
