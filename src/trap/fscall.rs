@@ -9,8 +9,8 @@ use core::slice::{from_raw_parts, from_raw_parts_mut};
 use alloc::string::{String, ToString};
 use riscv::register::fcsr::Flag;
 
-use crate::fs::disk::Path;
-use crate::io::{Read, Write};
+use crate::fs::disk::{Path, DISKFS};
+use crate::io::{Read, Seek, Write};
 use crate::{fs::*, thread::current};
 use crate::{sbi, thread, userproc};
 use alloc::vec::Vec;
@@ -172,4 +172,25 @@ pub fn seek_handler(fd: u32, pos: u32) -> isize {
         file.0.set_pos(pos);
     }
     return -1;
+}
+
+pub fn tell_handler(fd: u32) -> Result<isize, OsError> {
+    let thread = current();
+    let mut fd_map = thread.fd.lock();
+    let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?;
+    let pos = file.0.pos()?;
+    return Ok(*pos as isize);
+}
+
+pub fn remove_handler(path: usize) -> Result<isize, OsError> {
+    check_str_valid(path as *const u8)?;
+    let path = c_str_to_string(path as *const u8);
+
+    if path == "".to_string() {
+        return Err(OsError::BadPtr);
+    }
+
+    let path_sys: disk::Path = disk::Path::from(&path as &str);
+    DISKFS.remove(path_sys)?;
+    return Ok(0);
 }

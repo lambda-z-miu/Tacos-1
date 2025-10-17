@@ -46,7 +46,8 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
 
         SYS_WAIT => userproc::wait(args[0] as isize).unwrap_or(-1),
 
-        // SYS_REMOVE
+        SYS_REMOVE => fscall::remove_handler(args[0] as usize).unwrap_or(-1),
+
         SYS_OPEN => fscall::open_handler(args[0], args[1]).unwrap_or(-1),
 
         SYS_READ => fscall::read_handler(args[0] as u32, args[1] as *mut u8, args[2]).unwrap_or(-1),
@@ -56,7 +57,9 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
         }
 
         SYS_SEEK => fscall::seek_handler(args[0] as u32, args[1] as u32),
-        //SYS_TELL
+
+        SYS_TELL => fscall::tell_handler(args[0] as u32).unwrap_or(-1),
+
         SYS_CLOSE => fscall::close_handler(args[0] as u32).unwrap_or(-1),
 
         SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
