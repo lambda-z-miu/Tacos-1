@@ -45,6 +45,7 @@ pub struct Thread {
     pub children: Mutex<Vec<Arc<Thread>>>,
     pub completed: Semaphore,
     pub fd: Mutex<BTreeMap<u32, (File, FdFlags)>>,
+    pub stack_base: Option<usize>,
 }
 
 impl Thread {
@@ -55,6 +56,7 @@ impl Thread {
         entry: usize,
         userproc: Option<UserProc>,
         pagetable: Option<PageTable>,
+        stack_base: Option<usize>,
     ) -> Self {
         /// The next thread's id
         static TID: AtomicIsize = AtomicIsize::new(0);
@@ -72,6 +74,7 @@ impl Thread {
             children: Mutex::new(Vec::new()),
             completed: Semaphore::new(0),
             fd: Mutex::new(BTreeMap::new()),
+            stack_base: stack_base,
         }
     }
 
@@ -145,6 +148,7 @@ pub struct Builder {
     function: usize,
     userproc: Option<UserProc>,
     pagetable: Option<PageTable>,
+    stack_end: Option<usize>,
 }
 
 impl Builder {
@@ -161,6 +165,7 @@ impl Builder {
             function: function as usize,
             userproc: None,
             pagetable: None,
+            stack_end: None,
         }
     }
 
@@ -176,6 +181,11 @@ impl Builder {
 
     pub fn pagetable(mut self, pagetable: PageTable) -> Self {
         self.pagetable = Some(pagetable);
+        self
+    }
+
+    pub fn set_stack(mut self, stack_end: usize) -> Self {
+        self.stack_end = Some(stack_end);
         self
     }
 
@@ -197,6 +207,7 @@ impl Builder {
             self.function,
             self.userproc,
             self.pagetable,
+            self.stack_end,
         ))
     }
 

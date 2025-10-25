@@ -64,6 +64,7 @@ impl PageTable {
 
     /// Maps `pa` to `va` and allocates page table when necessary.
     pub fn map(&mut self, pa: PhysAddr, va: usize, size: usize, flag: PTEFlags) {
+        // kprintln!("{:x} {:x}", pa.value(), va);
         assert!(pa.is_aligned() && va.is_aligned(), "address misaligns");
 
         let pa_end = pa.value() + size;

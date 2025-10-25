@@ -8,7 +8,7 @@ use crate::mem::utils::{PhysAddr, PG_SHIFT};
 /// | Unused | PPN[2] | PPN[1] | PPN[0] | RSW |D|A|G|U|X|W|R|V|
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
-pub struct Entry(usize);
+pub struct Entry(pub usize);
 
 bitflags::bitflags! {
     pub struct PTEFlags: usize {
@@ -42,7 +42,7 @@ impl Entry {
         Entry((((pa.value() >> PG_SHIFT) & PPN_MASK) << Self::FLAG_SHIFT) | flags.bits())
     }
 
-    fn flag(&self) -> PTEFlags {
+    pub fn flag(&self) -> PTEFlags {
         PTEFlags::from_bits_truncate(self.0)
     }
 

@@ -139,6 +139,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     thread::Builder::new(move || start(frame))
         .pagetable(pt)
         .userproc(userproc)
+        .set_stack((argv_base as usize))
         .spawn()
         .id()
 }

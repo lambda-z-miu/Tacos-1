@@ -46,7 +46,7 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
     if len == 0 {
         return Ok(0); //zero reading is permited
     }
-    check_str_valid(buf as *const u8)?;
+    check_slice_valid(buf, len)?;
 
     let thread = current();
     let mut fd_map = thread.fd.lock();
@@ -59,8 +59,7 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
 }
 
 pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> Result<isize, OsError> {
-    check_str_valid(buf as *const u8)?;
-
+    check_slice_valid(buf, len)?;
     if fd == 1 || fd == 2 {
         let i = buf;
         for j in 0..len {
