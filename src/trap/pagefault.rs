@@ -1,10 +1,11 @@
+use self::util::*;
 use crate::mem::palloc::UserPool;
 use crate::mem::userbuf::{
     __knrl_read_usr_byte_pc, __knrl_read_usr_exit, __knrl_write_usr_byte_pc, __knrl_write_usr_exit,
 };
 use crate::mem::{Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
 use crate::thread::{self, current};
-use crate::trap::{flags, Frame};
+use crate::trap::{flags, util, Frame};
 use crate::userproc;
 
 use riscv::register::scause::Exception::{self, *};
@@ -92,19 +93,4 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             userproc::exit(-1);
         }
     }
-}
-
-pub fn alloc_from_pool(addr: usize) {
-    let va_alloc = unsafe { UserPool::alloc_pages(1) };
-    let mut flag = PTEFlags::V;
-    flag.set(PTEFlags::R, true);
-    flag.set(PTEFlags::U, true);
-    flag.set(PTEFlags::W, true);
-    kprintln!("A");
-    current().pagetable.as_ref().unwrap().lock().map(
-        PhysAddr::from(va_alloc),
-        addr - (addr % PG_SIZE),
-        1,
-        flag,
-    );
 }

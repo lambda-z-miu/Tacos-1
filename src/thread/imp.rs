@@ -1,6 +1,7 @@
 //! Implementation of kernel threads
 
 use crate::fs::disk::{DiskFs, DISKFS};
+use crate::mem::allocdata::{self, PageInfo};
 use crate::trap::flags::FdFlags;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
@@ -46,6 +47,7 @@ pub struct Thread {
     pub completed: Semaphore,
     pub fd: Mutex<BTreeMap<u32, (File, FdFlags)>>,
     pub stack_base: Option<usize>,
+    pub page_info: Mutex<Vec<PageInfo>>,
 }
 
 impl Thread {
@@ -75,6 +77,7 @@ impl Thread {
             completed: Semaphore::new(0),
             fd: Mutex::new(BTreeMap::new()),
             stack_base: stack_base,
+            page_info: Mutex::new(Vec::new()),
         }
     }
 

@@ -5,6 +5,10 @@ use alloc::vec::Vec;
 use core::ffi::CStr;
 use core::mem::size_of;
 use core::ptr;
+use mem::palloc::UserPool;
+use mem::PTEFlags;
+use mem::PG_SIZE;
+use PhysAddr;
 
 const MAX_STACK: usize = 0x800000;
 
@@ -74,4 +78,19 @@ pub fn parse_arg(argv: *const *const u8) -> Vec<String> {
         }
     }
     args
+}
+
+pub fn alloc_from_pool(addr: usize) {
+    let va_alloc = unsafe { UserPool::alloc_pages(1) };
+    let mut flag = PTEFlags::V;
+    flag.set(PTEFlags::R, true);
+    flag.set(PTEFlags::U, true);
+    flag.set(PTEFlags::W, true);
+    kprintln!("A");
+    current().pagetable.as_ref().unwrap().lock().map(
+        PhysAddr::from(va_alloc),
+        addr - (addr % PG_SIZE),
+        1,
+        flag,
+    );
 }

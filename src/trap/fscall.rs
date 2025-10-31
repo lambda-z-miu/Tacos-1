@@ -88,8 +88,14 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> Result<isize, OsErr
 }
 
 pub struct Fstat {
-    ino: u64,
-    size: u64,
+    pub ino: u64,
+    pub size: u64,
+}
+
+impl Fstat {
+    pub fn zeroed() -> Self {
+        Fstat { ino: 0, size: 0 }
+    }
 }
 
 pub fn fstat_handler(fd: u32, buf: *mut Fstat) -> isize {
@@ -108,7 +114,7 @@ pub fn fstat_handler(fd: u32, buf: *mut Fstat) -> isize {
                 ino: ino as u64,
                 size: size as u64,
             };
-            kprintln!("METADATA: ino {}, size {}", (*buf).ino, (*buf).size);
+            // kprintln!("METADATA: ino {}, size {}", (*buf).ino, (*buf).size);
         }
         return 0;
     }

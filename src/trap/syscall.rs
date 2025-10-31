@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 use crate::fs::disk;
-use crate::trap::fscall;
+use crate::trap::{fscall, memorytrap};
 use crate::{fs, sbi};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -26,17 +26,18 @@ const SYS_SEEK: usize = 9;
 const SYS_TELL: usize = 10;
 const SYS_CLOSE: usize = 11;
 const SYS_FSTAT: usize = 12;
+const SYS_MMAP: usize = 13;
 
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
-    /*
+
     kprintln!(
         "handler called 0x{:x} 0x{:x} 0x{:x} 0x{:x}",
         _id,
         args[0],
         args[1],
         args[2]
-    );*/
+    );
     let id = match _id {
         SYS_HALT => sbi::shutdown(),
 
@@ -63,6 +64,8 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
         SYS_CLOSE => fscall::close_handler(args[0] as u32).unwrap_or(-1),
 
         SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
+
+        SYS_MMAP => memorytrap::mmap_handler(args[0] as u32, args[1] as *mut u8).unwrap_or(-1),
 
         _ => {
             kprintln!("unexpected syscall id: {}", _id);

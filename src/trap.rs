@@ -3,6 +3,7 @@
 
 pub mod flags;
 pub mod fscall;
+pub mod memorytrap;
 mod pagefault;
 mod syscall;
 mod util;
