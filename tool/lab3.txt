@@ -1,0 +1,208 @@
+Running mmap-twice ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m79 ms[0m] handler called 0x8 0x2 0x804ffe7f 0x1
+:[[38;2;129;165;113;1m79 ms[0m] handler called 0x8 0x2 0x804ffe4f 0x1
+1[[38;2;129;165;113;1m80 ms[0m] handler called 0x8 0x2 0x804ffe4f 0x1
+4[[38;2;129;165;113;1m80 ms[0m] handler called 0x8 0x2 0x804ffe7f 0x1
+
+[[38;2;129;165;113;1m80 ms[0m] handler called 0x2 0x3039 0x804ffe7f 0x1
+[[38;2;129;165;113;1m81 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running mmap-shuffle ... FAILED
+STDOUT:
+[[38;2;129;165;113;1m1003 ms[0m] 1884286944
+[[38;2;129;165;113;1m1003 ms[0m] CALLED
+[[38;2;129;165;113;1m1003 ms[0m] CALLEDA
+[[38;2;129;165;113;1m1003 ms[0m] A
+[[38;2;129;165;113;1m1004 ms[0m] user stack base at 804fffe0, sp at 804fffb0, accessing 10001000
+[[38;2;129;165;113;1m1004 ms[0m] 1884286944
+[[38;2;129;165;113;1m1004 ms[0m] CALLED
+[[38;2;129;165;113;1m1004 ms[0m] CALLEDA
+[[38;2;129;165;113;1m1004 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running mmap-clean ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m88 ms[0m] handler called 0x8 0x2 0x804ffecf 0x1
+:[[38;2;129;165;113;1m89 ms[0m] handler called 0x8 0x2 0x804ffe9f 0x1
+3[[38;2;129;165;113;1m89 ms[0m] handler called 0x8 0x2 0x804ffe9f 0x1
+8[[38;2;129;165;113;1m89 ms[0m] handler called 0x8 0x2 0x804ffecf 0x1
+
+[[38;2;129;165;113;1m89 ms[0m] handler called 0x2 0x3039 0x804ffecf 0x1
+[[38;2;129;165;113;1m90 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running mmap-unmap ... PASSED
+Running mmap-over-code ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m70 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+:[[38;2;129;165;113;1m70 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+1[[38;2;129;165;113;1m70 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+0[[38;2;129;165;113;1m70 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+
+[[38;2;129;165;113;1m70 ms[0m] handler called 0x2 0x3039 0x804ffedf 0x1
+[[38;2;129;165;113;1m72 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running mmap-remove ... (TIMEOUT) FAILED
+Running pt-grow-stk-sc ... PASSED
+Running pt-grow-stack ... PASSED
+Running mmap-zero ... PASSED
+Running page-merge-seq ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m21 ms[0m] Hello, World!
+[[38;2;129;165;113;1m37 ms[0m] Executing command page-merge-seq
+[[38;2;129;165;113;1m65 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running pt-big-stk-obj ... PASSED
+Running pt-write-code2 ... FAILED
+STDOUT:
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m20 ms[0m] Hello, World!
+[[38;2;129;165;113;1m33 ms[0m] Executing command pt-write-code2
+[[38;2;129;165;113;1m64 ms[0m] handler called 0x6 0x1c80 0x0 0x0
+[[38;2;129;165;113;1m65 ms[0m] handler called 0x7 0x3 0x1000 0x1
+[[38;2;129;165;113;1m66 ms[0m] Page fault at 0x1000: rights error writing page in kernel context.
+[[38;2;129;165;113;1m66 ms[0m] panicked at src/trap/pagefault.rs:97:17:
+Kernel page fault
+Running mmap-overlap ... PASSED
+Running mmap-write ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffaaf 0x1
+:[[38;2;129;165;113;1m78 ms[0m] handler called 0x8 0x2 0x804ffa7f 0x1
+2[[38;2;129;165;113;1m78 ms[0m] handler called 0x8 0x2 0x804ffa7f 0x1
+5[[38;2;129;165;113;1m78 ms[0m] handler called 0x8 0x2 0x804ffaaf 0x1
+
+[[38;2;129;165;113;1m78 ms[0m] handler called 0x2 0x3039 0x804ffaaf 0x1
+[[38;2;129;165;113;1m79 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running page-merge-par ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m22 ms[0m] Hello, World!
+[[38;2;129;165;113;1m36 ms[0m] Executing command page-merge-par
+[[38;2;129;165;113;1m61 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running page-parallel ... FAILED
+STDOUT:
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m19 ms[0m] Hello, World!
+[[38;2;129;165;113;1m39 ms[0m] Executing command page-parallel
+[[38;2;129;165;113;1m68 ms[0m] handler called 0x3 0x1cc0 0x804fff70 0x0
+[[38;2;129;165;113;1m89 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running pt-bad-addr ... PASSED
+Running page-merge-mm ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m20 ms[0m] Hello, World!
+[[38;2;129;165;113;1m35 ms[0m] Executing command page-merge-mm
+[[38;2;129;165;113;1m64 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running page-merge-stk ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m19 ms[0m] Hello, World!
+[[38;2;129;165;113;1m33 ms[0m] Executing command page-merge-stk
+[[38;2;129;165;113;1m58 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running mmap-inherit ... PASSED
+Running mmap-close ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m63 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+:[[38;2;129;165;113;1m63 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+1[[38;2;129;165;113;1m63 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+8[[38;2;129;165;113;1m64 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+
+[[38;2;129;165;113;1m64 ms[0m] handler called 0x2 0x3039 0x804ffedf 0x1
+[[38;2;129;165;113;1m65 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running mmap-null ... PASSED
+Running pt-write-code ... PASSED
+Running pt-bad-read ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m67 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+:[[38;2;129;165;113;1m67 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+1[[38;2;129;165;113;1m67 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+0[[38;2;129;165;113;1m67 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+
+[[38;2;129;165;113;1m67 ms[0m] handler called 0x2 0x3039 0x804ffedf 0x1
+[[38;2;129;165;113;1m68 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running mmap-misalign ... PASSED
+Running page-linear ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m21 ms[0m] Hello, World!
+[[38;2;129;165;113;1m35 ms[0m] Executing command page-linear
+[[38;2;129;165;113;1m62 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running mmap-over-data ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+:[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+1[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+2[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+
+[[38;2;129;165;113;1m77 ms[0m] handler called 0x2 0x3039 0x804ffedf 0x1
+[[38;2;129;165;113;1m78 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running pt-grow-bad ... PASSED
+Running mmap-bad-fd ... PASSED
+Running mmap-read ... PASSED
+Running mmap-over-stk ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m69 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+:[[38;2;129;165;113;1m69 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+1[[38;2;129;165;113;1m69 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1
+0[[38;2;129;165;113;1m69 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1
+
+[[38;2;129;165;113;1m69 ms[0m] handler called 0x2 0x3039 0x804ffedf 0x1
+[[38;2;129;165;113;1m70 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+GRADE: 39/100

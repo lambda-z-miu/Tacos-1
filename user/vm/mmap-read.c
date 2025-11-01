@@ -11,7 +11,6 @@ void main() {
 
     assert((fd = open("sample.txt", 0)) > 2);
     assert((map = mmap(fd, actual)) != MAP_FAILED);
-    printf("%s,%s",actual,sample);
 
     /* Check that data is correct. */
     if (memcmp(actual, sample, strlen(sample))) panic("read of mmap'd file reported bad data");

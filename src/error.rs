@@ -21,4 +21,6 @@ pub enum OsError {
     UnAlignedAccess = -14,
     FileNotExist = -15,
     PermissionDenied = -16,
+    OverlappingMMap = -17,
+    MMapIDNotExist = -18,
 }

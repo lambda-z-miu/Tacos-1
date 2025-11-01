@@ -5,7 +5,7 @@ use crate::mem::userbuf::{
 };
 use crate::mem::{Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
 use crate::thread::{self, current};
-use crate::trap::{flags, util, Frame};
+use crate::trap::{flags, fscall, syscall, util, Frame};
 use crate::userproc;
 
 use riscv::register::scause::Exception::{self, *};
@@ -47,11 +47,24 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             addr
         );
         kprintln!("{}", current().stack_base.unwrap_or(0) - addr);
+
+        // growing stack
         if (current().stack_base.unwrap_or(0) - addr < MAX_STACK) && (addr > current_sp) {
             kprintln!("ALLOCK NEW pAGE");
             // panic!("log");
             alloc_from_pool(addr);
             return;
+        }
+
+        // lazy allocating mmap region
+        for i in current().mmap_info.lock().iter() {
+            if i.in_map(addr) {
+                for j in 0..i.pages {
+                    alloc_from_pool(i.addr + j * PG_SIZE);
+                    fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
+                    return;
+                }
+            }
         }
     }
 

@@ -27,6 +27,7 @@ const SYS_TELL: usize = 10;
 const SYS_CLOSE: usize = 11;
 const SYS_FSTAT: usize = 12;
 const SYS_MMAP: usize = 13;
+const SYS_UNMAP: usize = 14;
 
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
@@ -66,6 +67,8 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
         SYS_FSTAT => fscall::fstat_handler(args[0] as u32, args[1] as *mut fscall::Fstat),
 
         SYS_MMAP => memorytrap::mmap_handler(args[0] as u32, args[1] as *mut u8).unwrap_or(-1),
+
+        SYS_UNMAP => memorytrap::unmap_handler(args[0] as u32).unwrap_or(-1),
 
         _ => {
             kprintln!("unexpected syscall id: {}", _id);

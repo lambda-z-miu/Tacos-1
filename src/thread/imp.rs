@@ -17,6 +17,7 @@ use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
 use crate::sync::Semaphore;
 use crate::thread::{current, Manager};
+use crate::trap::memorytrap::MmapData;
 use crate::userproc::UserProc;
 
 pub const PRI_DEFAULT: u32 = 31;
@@ -48,6 +49,7 @@ pub struct Thread {
     pub fd: Mutex<BTreeMap<u32, (File, FdFlags)>>,
     pub stack_base: Option<usize>,
     pub page_info: Mutex<Vec<PageInfo>>,
+    pub mmap_info: Mutex<Vec<MmapData>>,
 }
 
 impl Thread {
@@ -78,6 +80,7 @@ impl Thread {
             fd: Mutex::new(BTreeMap::new()),
             stack_base: stack_base,
             page_info: Mutex::new(Vec::new()),
+            mmap_info: Mutex::new(Vec::new()),
         }
     }
 
@@ -118,6 +121,10 @@ impl Thread {
         for i in self.fd.lock().iter() {
             DISKFS.close(i.1 .0.clone());
         }
+    }
+
+    pub fn add_mmap(&self, mmapitem: MmapData) {
+        self.mmap_info.lock().push(mmapitem);
     }
 }
 
