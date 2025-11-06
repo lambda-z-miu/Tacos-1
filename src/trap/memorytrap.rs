@@ -70,10 +70,14 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
         }
     }
 
+    if check_page_overlap(addr as usize) {
+        return Err(OsError::OverlappingMMap);
+    }
+
     let pages_need = (size as usize + PG_SIZE - 1) / PG_SIZE;
     let mmap_id = MMAP_CNT.fetch_add(1, Ordering::SeqCst);
 
-    kprintln!("! {}", pages_need);
+    // kprintln!("! {}", pages_need);
 
     let mmapitem = MmapData {
         mmap_id: mmap_id,
@@ -99,8 +103,20 @@ fn check_overlap(fd1: u32, fd2: u32) -> bool {
     return fd1_node == fd2_node;
 }
 
+fn check_page_overlap(va: usize) -> bool {
+    kprintln!("called check page overlap at 0x{:x}", va);
+    let thread = current();
+    let page_info = thread.page_info.lock();
+    for i in page_info.iter() {
+        kprintln!("existing page at 0x{:x}", i.va);
+        if (i.va == va) {
+            return true;
+        }
+    }
+    return false;
+}
+
 pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
-    kprintln!("REACHED");
     let thread = current();
     let mut mmap_info = thread.mmap_info.lock();
     for i in 0..mmap_info.len() {

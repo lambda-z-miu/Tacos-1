@@ -37,6 +37,7 @@ impl Manager {
                 None,
                 None,
                 None,
+                Vec::new(),
             ));
             unsafe { (bootstack as *mut usize).write(MAGIC) };
             initial.set_status(Status::Running);

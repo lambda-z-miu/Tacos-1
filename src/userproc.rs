@@ -140,6 +140,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         .pagetable(pt)
         .userproc(userproc)
         .set_stack((argv_base as usize))
+        .pageinfo(current().page_info.lock().to_vec())
         .spawn()
         .id()
 }

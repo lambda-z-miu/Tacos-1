@@ -1,4 +1,6 @@
 use self::util::*;
+use crate::mem::allocdata::AllocType;
+use crate::mem::allocdata::PageInfo;
 use crate::mem::palloc::UserPool;
 use crate::mem::userbuf::{
     __knrl_read_usr_byte_pc, __knrl_read_usr_exit, __knrl_write_usr_byte_pc, __knrl_write_usr_exit,
@@ -50,7 +52,6 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
 
         // growing stack
         if (current().stack_base.unwrap_or(0) - addr < MAX_STACK) && (addr > current_sp) {
-            kprintln!("ALLOCK NEW pAGE");
             // panic!("log");
             alloc_from_pool(addr);
             return;
@@ -60,6 +61,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         for i in current().mmap_info.lock().iter() {
             if i.in_map(addr) {
                 for j in 0..i.pages {
+                    kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
                     alloc_from_pool(i.addr + j * PG_SIZE);
                     fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
                     return;

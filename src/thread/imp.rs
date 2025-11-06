@@ -15,7 +15,7 @@ use fs::FileSys;
 use crate::fs::File;
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
-use crate::sync::Semaphore;
+use crate::sync::{sleep, Semaphore};
 use crate::thread::{current, Manager};
 use crate::trap::memorytrap::MmapData;
 use crate::userproc::UserProc;
@@ -61,6 +61,7 @@ impl Thread {
         userproc: Option<UserProc>,
         pagetable: Option<PageTable>,
         stack_base: Option<usize>,
+        page_info: Vec<PageInfo>,
     ) -> Self {
         /// The next thread's id
         static TID: AtomicIsize = AtomicIsize::new(0);
@@ -79,7 +80,7 @@ impl Thread {
             completed: Semaphore::new(0),
             fd: Mutex::new(BTreeMap::new()),
             stack_base: stack_base,
-            page_info: Mutex::new(Vec::new()),
+            page_info: Mutex::new(page_info),
             mmap_info: Mutex::new(Vec::new()),
         }
     }
@@ -126,6 +127,10 @@ impl Thread {
     pub fn add_mmap(&self, mmapitem: MmapData) {
         self.mmap_info.lock().push(mmapitem);
     }
+
+    pub fn add_page(&self, pageitem: PageInfo) {
+        self.page_info.lock().push(pageitem);
+    }
 }
 
 impl Debug for Thread {
@@ -159,6 +164,7 @@ pub struct Builder {
     userproc: Option<UserProc>,
     pagetable: Option<PageTable>,
     stack_end: Option<usize>,
+    page_info: Vec<PageInfo>,
 }
 
 impl Builder {
@@ -176,7 +182,13 @@ impl Builder {
             userproc: None,
             pagetable: None,
             stack_end: None,
+            page_info: Vec::new(),
         }
+    }
+
+    pub fn pageinfo(mut self, page_record: Vec<PageInfo>) -> Self {
+        self.page_info = page_record;
+        self
     }
 
     pub fn priority(mut self, priority: u32) -> Self {
@@ -210,15 +222,18 @@ impl Builder {
         // Put magic number at the bottom of the stack.
         unsafe { (stack as *mut usize).write(MAGIC) };
 
-        Arc::new(Thread::new(
-            self.name,
-            stack,
-            self.priority,
-            self.function,
-            self.userproc,
-            self.pagetable,
-            self.stack_end,
-        ))
+        Arc::new({
+            Thread::new(
+                self.name,
+                stack,
+                self.priority,
+                self.function,
+                self.userproc,
+                self.pagetable,
+                self.stack_end,
+                self.page_info,
+            )
+        })
     }
 
     /// Spawns a kernel thread and registers it to the [`Manager`].
@@ -228,6 +243,7 @@ impl Builder {
     /// Note that this function CANNOT be called during [`Manager`]'s initialization.
     pub fn spawn(self) -> Arc<Thread> {
         let new_thread = self.build();
+        // *new_thread.page_info.lock() = self.page_info;
         current().children.lock().push(new_thread.clone());
 
         #[cfg(feature = "debug")]

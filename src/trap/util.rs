@@ -1,3 +1,4 @@
+use crate::mem::allocdata::*;
 use crate::thread::current;
 use crate::OsError;
 use alloc::string::{String, ToString};
@@ -82,11 +83,16 @@ pub fn parse_arg(argv: *const *const u8) -> Vec<String> {
 
 pub fn alloc_from_pool(addr: usize) {
     let va_alloc = unsafe { UserPool::alloc_pages(1) };
+    let thread = current();
+    let mut pageinfo = thread.page_info.lock();
+    pageinfo.push(PageInfo {
+        va: va_alloc as usize,
+        page_type: AllocType::Stack,
+    });
     let mut flag = PTEFlags::V;
     flag.set(PTEFlags::R, true);
     flag.set(PTEFlags::U, true);
     flag.set(PTEFlags::W, true);
-    kprintln!("A");
     current().pagetable.as_ref().unwrap().lock().map(
         PhysAddr::from(va_alloc),
         addr - (addr % PG_SIZE),

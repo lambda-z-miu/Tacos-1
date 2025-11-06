@@ -1,9 +1,22 @@
-enum AllocType {
+#[derive(Clone)]
+pub enum AllocType {
     MemMap,
-    StackGrowth,
+    Stack,
+    Init,
 }
 
+#[derive(Clone)]
 pub struct PageInfo {
-    va: usize,
-    page_type: AllocType,
+    pub va: usize,
+    pub page_type: AllocType,
 }
+
+/*
+impl PageInfo {
+    fn print(&self) {
+        match  {
+
+        }
+        kprintln!("{}")
+    }
+}*/

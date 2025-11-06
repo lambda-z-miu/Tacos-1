@@ -3,9 +3,12 @@ use elf_rs::{Elf, ElfFile, ProgramHeaderEntry, ProgramHeaderFlags, ProgramType};
 
 use crate::fs::File;
 use crate::io::prelude::*;
+use crate::mem::allocdata::*;
+use crate::mem::allocdata::*;
 use crate::mem::pagetable::{PTEFlags, PageTable};
 use crate::mem::palloc::UserPool;
 use crate::mem::{div_round_up, PageAlign, PhysAddr, PG_MASK, PG_SIZE};
+use crate::thread::current;
 use crate::{OsError, Result};
 
 #[derive(Debug, Clone, Copy)]
@@ -101,6 +104,12 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
         // when user process exits. No manual resource collect is required.
         let uaddr = ubase + p * PG_SIZE;
         pagetable.map(buf.into(), uaddr, 1, leaf_flag);
+        let thread = current();
+        let mut pageinfo = thread.page_info.lock();
+        pageinfo.push(PageInfo {
+            va: uaddr,
+            page_type: AllocType::Init,
+        });
 
         readbytes -= readsz;
         readpos += readsz;
@@ -116,6 +125,12 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
     // Allocate a page from UserPool as user stack.
     let stack_va = unsafe { UserPool::alloc_pages(1) };
     let stack_pa = PhysAddr::from(stack_va);
+    let thread = current();
+    let mut pageinfo = thread.page_info.lock();
+    pageinfo.push(PageInfo {
+        va: stack_va as usize,
+        page_type: AllocType::Stack,
+    });
 
     // Get the start address of stack page
     let stack_page_begin = PageAlign::floor(init_sp - 1);
