@@ -27,37 +27,27 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     };
 
     unsafe { sstatus::set_sie() };
-    /*
-    kprintln!(
-        "in pt : {}",
-        current()
-            .pagetable
-            .as_ref()
-            .unwrap()
-            .lock()
-            .get_pte(addr)
-            .unwrap()
-            .is_valid()
-    );*/
 
     if !present {
         let current_sp = frame.x[2];
+        /*
         kprintln!(
             "user stack base at {:x}, sp at {:x}, accessing {:x}",
             current().stack_base.unwrap_or(0xbeef),
             current_sp,
             addr
         );
-        kprintln!("{}", current().stack_base.unwrap_or(0) - addr);
+        kprintln!("{}", current().stack_base.unwrap_or(0) - addr);*/
 
         // growing stack
-        if (current().stack_base.unwrap_or(0) - addr < MAX_STACK) && (addr > current_sp) {
+        if ((addr > current_sp) && current().stack_base.unwrap_or(0) - addr < MAX_STACK) {
             // panic!("log");
             alloc_from_pool(addr);
             return;
         }
 
         // lazy allocating mmap region
+        kprintln!("{} needed", addr);
         for i in current().mmap_info.lock().iter() {
             if i.in_map(addr) {
                 for j in 0..i.pages {

@@ -1,3 +1,4 @@
+use crate::mem::allocdata::*;
 use alloc::alloc::dealloc;
 
 use crate::{
@@ -63,12 +64,13 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
     if addr as usize % PG_SIZE != 0 {
         return Err(OsError::BadPtr);
     }
+    /*
     for i in current().mmap_info.lock().iter() {
         if check_overlap(fd, i.fd) {
             kprintln!("CALLED");
             return Err(OsError::OverlappingMMap);
         }
-    }
+    }*/
 
     if check_page_overlap(addr as usize) {
         return Err(OsError::OverlappingMMap);
@@ -86,6 +88,16 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
         fd: fd,
         len: size,
     };
+
+    let thread = current();
+    let mut pageinfo = thread.page_info.lock();
+    for i in 0..pages_need {
+        pageinfo.push(PageInfo {
+            va: addr as usize + PG_SIZE * i,
+            page_type: AllocType::MemMap,
+        });
+    }
+
     current().add_mmap(mmapitem);
 
     /*
@@ -122,7 +134,13 @@ pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
     for i in 0..mmap_info.len() {
         if mmap_info[i].mmap_id == mmap_id {
             let item = mmap_info.remove(i);
+            kprintln!("write to {}", item.fd);
+            let pos_mem = fscall::tell_handler(item.fd)?;
             fscall::write_handler(item.fd, item.addr as *const u8, item.len as usize);
+            if pos_mem >= 0 {
+                fscall::seek_handler(item.fd, pos_mem as u32);
+                return Ok(0);
+            }
         }
     }
     return Err(OsError::MMapIDNotExist);

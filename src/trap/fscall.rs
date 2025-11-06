@@ -76,6 +76,13 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> Result<isize, OsErr
     if len == 0 {
         return Ok(0); //zero reading is permited
     }
+    /*
+    for i in 0..len {
+        unsafe {
+            kprintln!("{}", *(buf.wrapping_add(i)));
+        }
+    }
+    */
 
     let thread = current();
     let mut fd_map = thread.fd.lock();
