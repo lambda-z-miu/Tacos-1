@@ -67,6 +67,10 @@ impl Entry {
         self.flag().contains(PTEFlags::R | PTEFlags::W)
     }
 
+    pub fn is_writable(&self) -> bool {
+        self.flag().contains(PTEFlags::W)
+    }
+
     pub fn is_user(&self) -> bool {
         self.flag().contains(PTEFlags::U)
     }

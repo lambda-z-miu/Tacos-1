@@ -15,8 +15,17 @@ use PhysAddr;
 const MAX_STACK: usize = 0x800000;
 pub static mut SP: usize = 0;
 
+pub fn check_ptr_writable(va: usize) -> bool {
+    let thread = current();
+    let pt_ref = thread.pagetable.as_ref().unwrap().lock();
+    let ptentry = pt_ref.get_pte(va);
+    return match ptentry {
+        Some(entry) => entry.is_writable() | !entry.is_valid(),
+        None => true,
+    };
+}
+
 pub fn check_ptr_valid(va: usize) -> bool {
-    // kprintln!("CHECKVALID CALLED at {}", va);
     let thread = current();
     let pt_ref = thread.pagetable.as_ref().unwrap().lock();
     let ptentry = pt_ref.get_pte(va);
@@ -24,7 +33,7 @@ pub fn check_ptr_valid(va: usize) -> bool {
         unsafe {
             if (current().stack_base.unwrap_or(0) - va <= MAX_STACK && va >= SP) {
                 kprintln!(
-                    "va at {:x}, sp at {:x}, stack base at {:x}",
+                    "ptr check: va at {:x}, sp at {:x}, stack base at {:x}",
                     va,
                     SP,
                     current().stack_base.unwrap_or(0)
@@ -57,6 +66,16 @@ pub fn check_slice_valid(ptr: *const u8, len: usize) -> Result<(), OsError> {
     for i in 0..len {
         if !check_ptr_valid(ptr.wrapping_add(i) as usize) {
             return Err(OsError::BadPtr);
+        }
+    }
+    Ok(())
+}
+
+pub fn check_slice_writable(ptr: *const u8, len: usize) -> Result<(), OsError> {
+    for i in 0..len {
+        if !check_ptr_writable(ptr.wrapping_add(i) as usize) {
+            kprintln!("SLICE CHECK FAILED");
+            return Err(OsError::InvalidFileMode);
         }
     }
     Ok(())

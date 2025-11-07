@@ -125,15 +125,16 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
     // Allocate a page from UserPool as user stack.
     let stack_va = unsafe { UserPool::alloc_pages(1) };
     let stack_pa = PhysAddr::from(stack_va);
-    let thread = current();
-    let mut pageinfo = thread.page_info.lock();
-    pageinfo.push(PageInfo {
-        va: stack_va as usize,
-        page_type: AllocType::Stack,
-    });
 
     // Get the start address of stack page
     let stack_page_begin = PageAlign::floor(init_sp - 1);
+
+    let thread = current();
+    let mut pageinfo = thread.page_info.lock();
+    pageinfo.push(PageInfo {
+        va: stack_page_begin as usize,
+        page_type: AllocType::Stack,
+    });
 
     // Install mapping
     let flags = PTEFlags::V | PTEFlags::R | PTEFlags::W | PTEFlags::U;

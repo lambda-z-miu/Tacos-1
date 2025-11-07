@@ -47,12 +47,14 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
         return Ok(0); //zero reading is permited
     }
     check_slice_valid(buf, len)?;
+    check_slice_writable(buf, len)?;
 
     let thread = current();
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?; // file not exist
     file.1.read_permision()?; // file cannot be read
     unsafe {
+        kprintln!("READ HAPPENED");
         let size = file.0.read(from_raw_parts_mut(buf, len))?;
         return Ok(size as isize);
     }
