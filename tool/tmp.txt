@@ -1,33 +1,5 @@
-Running mmap-over-data ... PASSED
-Running mmap-misalign ... PASSED
-Running pt-write-code2 ... PASSED
-Running pt-write-code ... PASSED
-Running mmap-inherit ... PASSED
-Running pt-bad-read ... PASSED
-Running page-merge-par ... FAILED
-STDOUT:
-Boot HART PMP Granularity : 2 bits
-Boot HART PMP Address Bits: 54
-Boot HART MHPM Info       : 0 (0x00000000)
-Boot HART Debug Triggers  : 0 triggers
-Boot HART MIDELEG         : 0x0000000000001666
-Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m93 ms[0m] Hello, World!
-[[38;2;129;165;113;1m235 ms[0m] Executing command page-merge-par
-[[38;2;129;165;113;1m352 ms[0m] panicked at src/mem/palloc.rs:79:9:
-internal error: entered unreachable code: memory is exhausted
-Running page-merge-mm ... FAILED
-STDOUT:
-Boot HART PMP Granularity : 2 bits
-Boot HART PMP Address Bits: 54
-Boot HART MHPM Info       : 0 (0x00000000)
-Boot HART Debug Triggers  : 0 triggers
-Boot HART MIDELEG         : 0x0000000000001666
-Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m62 ms[0m] Hello, World!
-[[38;2;129;165;113;1m171 ms[0m] Executing command page-merge-mm
-[[38;2;129;165;113;1m206 ms[0m] panicked at src/mem/palloc.rs:79:9:
-internal error: entered unreachable code: memory is exhausted
+Running mmap-over-code ... PASSED
+Running mmap-write ... PASSED
 Running page-merge-seq ... FAILED
 STDOUT:
 Boot HART PMP Granularity : 2 bits
@@ -36,36 +8,12 @@ Boot HART MHPM Info       : 0 (0x00000000)
 Boot HART Debug Triggers  : 0 triggers
 Boot HART MIDELEG         : 0x0000000000001666
 Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m63 ms[0m] Hello, World!
-[[38;2;129;165;113;1m112 ms[0m] Executing command page-merge-seq
-[[38;2;129;165;113;1m165 ms[0m] panicked at src/mem/palloc.rs:79:9:
+[[38;2;129;165;113;1m18 ms[0m] Hello, World!
+[[38;2;129;165;113;1m32 ms[0m] Executing command page-merge-seq
+[[38;2;129;165;113;1m51 ms[0m] panicked at src/mem/palloc.rs:79:9:
 internal error: entered unreachable code: memory is exhausted
-Running page-linear ... FAILED
-STDOUT:
-Boot HART PMP Granularity : 2 bits
-Boot HART PMP Address Bits: 54
-Boot HART MHPM Info       : 0 (0x00000000)
-Boot HART Debug Triggers  : 0 triggers
-Boot HART MIDELEG         : 0x0000000000001666
-Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m69 ms[0m] Hello, World!
-[[38;2;129;165;113;1m131 ms[0m] Executing command page-linear
-[[38;2;129;165;113;1m288 ms[0m] panicked at src/mem/palloc.rs:79:9:
-internal error: entered unreachable code: memory is exhausted
-Running mmap-write ... PASSED
-Running mmap-overlap ... PASSED
-Running mmap-shuffle ... FAILED
-STDOUT:
-[[38;2;129;165;113;1m4787 ms[0m] READ HAPPENED
-[[38;2;129;165;113;1m4787 ms[0m] addr at 10001000, base at804fffe0, sp at 804fffb0
-[[38;2;129;165;113;1m4791 ms[0m] 268439552 needed
-[[38;2;129;165;113;1m4792 ms[0m] ALLOCK NEW PAGE at 268435456
-[[38;2;129;165;113;1m4796 ms[0m] READ HAPPENED
-[[38;2;129;165;113;1m4796 ms[0m] addr at 10001000, base at804fffe0, sp at 804fffb0
-[[38;2;129;165;113;1m4796 ms[0m] 268439552 needed
-[[38;2;129;165;113;1m4796 ms[0m] ALLOCK NEW PAGE at 268435456
-[[38;2;129;165;113;1m4797 ms[0m] panicked at src/mem/palloc.rs:79:9:
-internal error: entered unreachable code: memory is exhausted
+Running mmap-remove ... PASSED
+Running mmap-misalign ... PASSED
 Running page-merge-stk ... FAILED
 STDOUT:
 Boot HART PMP Granularity : 2 bits
@@ -74,10 +22,44 @@ Boot HART MHPM Info       : 0 (0x00000000)
 Boot HART Debug Triggers  : 0 triggers
 Boot HART MIDELEG         : 0x0000000000001666
 Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m123 ms[0m] Hello, World!
-[[38;2;129;165;113;1m212 ms[0m] Executing command page-merge-stk
-[[38;2;129;165;113;1m357 ms[0m] panicked at src/mem/palloc.rs:79:9:
+[[38;2;129;165;113;1m20 ms[0m] Hello, World!
+[[38;2;129;165;113;1m36 ms[0m] Executing command page-merge-stk
+[[38;2;129;165;113;1m59 ms[0m] panicked at src/mem/palloc.rs:79:9:
 internal error: entered unreachable code: memory is exhausted
+Running page-merge-par ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m24 ms[0m] Hello, World!
+[[38;2;129;165;113;1m39 ms[0m] Executing command page-merge-par
+[[38;2;129;165;113;1m60 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running pt-grow-bad ... PASSED
+Running mmap-over-stk ... PASSED
+Running pt-bad-read ... PASSED
+Running mmap-overlap ... PASSED
+Running pt-bad-addr ... PASSED
+Running mmap-zero ... PASSED
+Running mmap-unmap ... PASSED
+Running mmap-twice ... PASSED
+Running mmap-clean ... FAILED
+STDOUT:
+c[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffecf 0x1
+:[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffe9f 0x1
+3[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffe9f 0x1
+8[[38;2;129;165;113;1m77 ms[0m] handler called 0x8 0x2 0x804ffecf 0x1
+
+[[38;2;129;165;113;1m77 ms[0m] handler called 0x2 0x3039 0x804ffecf 0x1
+[[38;2;129;165;113;1m78 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running pt-grow-stk-sc ... PASSED
+Running mmap-inherit ... PASSED
 Running page-parallel ... FAILED
 STDOUT:
 Boot HART PMP Address Bits: 54
@@ -85,36 +67,43 @@ Boot HART MHPM Info       : 0 (0x00000000)
 Boot HART Debug Triggers  : 0 triggers
 Boot HART MIDELEG         : 0x0000000000001666
 Boot HART MEDELEG         : 0x0000000000f0b509
-[[38;2;129;165;113;1m49 ms[0m] Hello, World!
-[[38;2;129;165;113;1m96 ms[0m] Executing command page-parallel
-[[38;2;129;165;113;1m257 ms[0m] handler called 0x3 0x1cc0 0x804fff70 0x0
-[[38;2;129;165;113;1m333 ms[0m] panicked at src/mem/palloc.rs:79:9:
+[[38;2;129;165;113;1m20 ms[0m] Hello, World!
+[[38;2;129;165;113;1m34 ms[0m] Executing command page-parallel
+[[38;2;129;165;113;1m57 ms[0m] handler called 0x3 0x1cc0 0x804fff70 0x0
+[[38;2;129;165;113;1m71 ms[0m] panicked at src/mem/palloc.rs:79:9:
 internal error: entered unreachable code: memory is exhausted
+Running mmap-over-data ... PASSED
 Running mmap-null ... PASSED
-Running pt-grow-stack ... PASSED
-Running mmap-close ... PASSED
-Running mmap-over-stk ... PASSED
-Running mmap-clean ... FAILED
-STDOUT:
-c[[38;2;129;165;113;1m301 ms[0m] handler called 0x8 0x2 0x804ffecf 0x1
-:[[38;2;129;165;113;1m302 ms[0m] handler called 0x8 0x2 0x804ffe9f 0x1
-3[[38;2;129;165;113;1m302 ms[0m] handler called 0x8 0x2 0x804ffe9f 0x1
-9[[38;2;129;165;113;1m302 ms[0m] handler called 0x8 0x2 0x804ffecf 0x1
-
-[[38;2;129;165;113;1m302 ms[0m] handler called 0x2 0x3039 0x804ffecf 0x1
-[[38;2;129;165;113;1m305 ms[0m] panicked at src/../test/user.rs:39:9:
-assertion `left == right` failed
-  left: 12345
- right: 0
 Running mmap-bad-fd ... PASSED
-Running mmap-remove ... (TIMEOUT) FAILED
-Running mmap-unmap ... PASSED
-Running pt-grow-bad ... PASSED
-Running pt-grow-stk-sc ... PASSED
-Running mmap-twice ... PASSED
+Running page-merge-mm ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m21 ms[0m] Hello, World!
+[[38;2;129;165;113;1m36 ms[0m] Executing command page-merge-mm
+[[38;2;129;165;113;1m59 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
 Running mmap-read ... PASSED
-Running mmap-over-code ... PASSED
-Running pt-bad-addr ... PASSED
+Running page-linear ... FAILED
+STDOUT:
+Boot HART PMP Granularity : 2 bits
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m22 ms[0m] Hello, World!
+[[38;2;129;165;113;1m39 ms[0m] Executing command page-linear
+[[38;2;129;165;113;1m57 ms[0m] panicked at src/mem/palloc.rs:79:9:
+internal error: entered unreachable code: memory is exhausted
+Running mmap-close ... PASSED
+Running pt-write-code2 ... PASSED
+Running pt-write-code ... PASSED
 Running pt-big-stk-obj ... PASSED
-Running mmap-zero ... PASSED
-GRADE: 61/100
+Running mmap-shuffle ... PASSED
+Running pt-grow-stack ... PASSED
+GRADE: 67/100

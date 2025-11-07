@@ -101,6 +101,19 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
     }
 
     current().add_mmap(mmapitem);
+    /*
+    kprintln!(
+        "mmap id {} is {} ditry",
+        mmap_id,
+        current()
+            .pagetable
+            .as_ref()
+            .unwrap()
+            .lock()
+            .get_pte(addr as usize)
+            .unwrap()
+            .is_dirty()
+    );*/
 
     /*
     for i in 0..pages_need {
@@ -136,12 +149,10 @@ pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
     for i in 0..mmap_info.len() {
         if mmap_info[i].mmap_id == mmap_id {
             let item = mmap_info.remove(i);
-            kprintln!("write to {}", item.fd);
 
             let base = item.addr;
             let mut dirty = false;
             for i in 0..item.pages {
-                kprintln!("CALLED N");
                 if let Some(found_page) = thread
                     .pagetable
                     .as_ref()
@@ -149,12 +160,17 @@ pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
                     .lock()
                     .get_pte(base + i * PG_SIZE)
                 {
-                    kprintln!("CALLED WB");
-                    dirty |= found_page.is_dirty();
+                    kprintln!(
+                        "page {} dirty bit {}",
+                        i,
+                        found_page.is_dirty() && found_page.is_valid()
+                    );
+                    dirty |= (found_page.is_dirty() && found_page.is_valid());
                 }
             }
 
             if dirty {
+                kprintln!("WB CALLED");
                 let pos_mem = fscall::tell_handler(item.fd)?;
                 fscall::write_handler(item.fd, item.addr as *const u8, item.len as usize);
                 if pos_mem >= 0 {

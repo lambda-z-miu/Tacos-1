@@ -96,6 +96,10 @@ impl Entry {
         self.0 &= !PTEFlags::A.bits;
     }
 
+    pub fn set_clean(&mut self) {
+        self.0 &= !PTEFlags::D.bits;
+    }
+
     /// A PTE is a leaf PTE when at least one bit in R, W and X
     /// is set; otherwise, it is a pointer to the next level of
     /// the page table.

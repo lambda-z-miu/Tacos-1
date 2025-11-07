@@ -63,10 +63,18 @@ pub fn check_str_valid(ptr: *const u8) -> Result<(), OsError> {
 }
 
 pub fn check_slice_valid(ptr: *const u8, len: usize) -> Result<(), OsError> {
-    for i in 0..len {
-        if !check_ptr_valid(ptr.wrapping_add(i) as usize) {
+    if !check_ptr_valid(ptr as usize) {
+        return Err(OsError::BadPtr);
+    }
+    let mut head = ptr.wrapping_add(1);
+    let mut checked_len = 1;
+    while (checked_len < len) {
+        // kprintln!("CNT");
+        if !check_ptr_valid(head as usize) {
             return Err(OsError::BadPtr);
         }
+        checked_len += PG_SIZE;
+        head = head.wrapping_add(PG_SIZE);
     }
     Ok(())
 }
@@ -120,6 +128,7 @@ pub fn alloc_from_pool(addr: usize) {
     flag.set(PTEFlags::R, true);
     flag.set(PTEFlags::U, true);
     flag.set(PTEFlags::W, true);
+    flag.set(PTEFlags::V, true);
     flag.set(PTEFlags::D, false);
     current().pagetable.as_ref().unwrap().lock().map(
         PhysAddr::from(va_alloc),

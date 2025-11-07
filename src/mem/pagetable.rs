@@ -80,11 +80,11 @@ impl PageTable {
     }
 
     /// Finds the corresponding entry by the given virtual address
-    pub fn get_pte(&self, va: usize) -> Option<&Entry> {
+    pub fn get_pte(&self, va: usize) -> Option<&mut Entry> {
         self.walk(Self::px(2, va)).and_then(|l1_table| {
             l1_table
                 .walk(Self::px(1, va))
-                .map(|l0_table| l0_table.entries.get(Self::px(0, va)).unwrap())
+                .map(|l0_table| l0_table.entries.get_mut(Self::px(0, va)).unwrap())
         })
     }
 

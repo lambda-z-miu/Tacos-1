@@ -50,7 +50,8 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             current().stack_base.unwrap_or(0),
             current_sp
         );
-        if (addr > current_sp && current().stack_base.unwrap_or(0) - addr < MAX_STACK) {
+        let base = current().stack_base.unwrap_or(0);
+        if (addr > current_sp && base < addr + MAX_STACK && addr < base) {
             // panic!("log");
             kprint!("growing stack to {:x}\n", addr);
             alloc_from_pool(addr);
@@ -58,15 +59,20 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         }
 
         // lazy allocating mmap region
-        kprintln!("{} needed", addr);
+        kprintln!("0x{:x} needed", addr);
         for i in current().mmap_info.lock().iter() {
             if i.in_map(addr) {
+                // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
                 for j in 0..i.pages {
-                    kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
+                    // kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
                     alloc_from_pool(i.addr + j * PG_SIZE);
+
                     fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
-                    return;
+                    let thread = current();
+                    let pt = thread.pagetable.as_ref().unwrap();
+                    pt.lock().get_pte(addr).unwrap().set_clean();
                 }
+                return;
             }
         }
     }
