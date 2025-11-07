@@ -27,6 +27,7 @@ pub struct MmapData {
     pub pages: usize,
     pub fd: u32,
     pub len: u64,
+    pub need_close: bool,
 }
 
 impl MmapData {
@@ -87,6 +88,7 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
         pages: pages_need,
         fd: fd,
         len: size,
+        need_close: false,
     };
 
     let thread = current();
@@ -135,11 +137,33 @@ pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
         if mmap_info[i].mmap_id == mmap_id {
             let item = mmap_info.remove(i);
             kprintln!("write to {}", item.fd);
-            let pos_mem = fscall::tell_handler(item.fd)?;
-            fscall::write_handler(item.fd, item.addr as *const u8, item.len as usize);
-            if pos_mem >= 0 {
-                fscall::seek_handler(item.fd, pos_mem as u32);
-                return Ok(0);
+
+            let base = item.addr;
+            let mut dirty = false;
+            for i in 0..item.pages {
+                kprintln!("CALLED N");
+                if let Some(found_page) = thread
+                    .pagetable
+                    .as_ref()
+                    .unwrap()
+                    .lock()
+                    .get_pte(base + i * PG_SIZE)
+                {
+                    kprintln!("CALLED WB");
+                    dirty |= found_page.is_dirty();
+                }
+            }
+
+            if dirty {
+                let pos_mem = fscall::tell_handler(item.fd)?;
+                fscall::write_handler(item.fd, item.addr as *const u8, item.len as usize);
+                if pos_mem >= 0 {
+                    fscall::seek_handler(item.fd, pos_mem as u32);
+                    return Ok(0);
+                }
+                if item.need_close == true {
+                    fscall::close_handler(item.fd);
+                }
             }
         }
     }

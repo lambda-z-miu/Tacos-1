@@ -70,6 +70,9 @@ pub extern "C" fn trap_handler(frame: &mut Frame) {
             unsafe { riscv::register::sstatus::set_sie() };
             // Increase sepc by 1 to skip ecall.
             frame.sepc += 4;
+            unsafe {
+                crate::trap::util::SP = frame.x[2];
+            }
             frame.x[10] = syscall::syscall_handler(id, args) as usize;
         }
 

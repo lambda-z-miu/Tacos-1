@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 use crate::fs::disk;
-use crate::trap::{fscall, memorytrap};
+use crate::trap::{fscall, memorytrap, Frame};
 use crate::{fs, sbi};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;

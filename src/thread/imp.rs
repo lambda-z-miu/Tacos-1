@@ -39,7 +39,7 @@ pub struct Thread {
     name: &'static str,
     stack: usize,
     status: Mutex<Status>,
-    context: Mutex<Context>,
+    pub context: Mutex<Context>,
     pub priority: AtomicU32,
     pub userproc: Option<UserProc>,
     pub pagetable: Option<Mutex<PageTable>>,
@@ -281,7 +281,7 @@ pub struct Context {
     /// kernel stack
     sp: usize,
     /// callee-saved
-    s: [usize; 12],
+    pub s: [usize; 12],
 }
 
 impl Context {

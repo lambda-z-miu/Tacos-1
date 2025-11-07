@@ -169,6 +169,13 @@ pub fn close_handler(fd: u32) -> Result<isize, OsError> {
     }
 
     let thread = current();
+    let mut mmap_info = thread.mmap_info.lock();
+    for i in mmap_info.iter_mut() {
+        if i.fd == fd {
+            i.need_close = true;
+            return Ok(0);
+        }
+    }
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get(&fd).ok_or(OsError::FileNotExist)?;
     disk::DISKFS.close(file.0.clone());

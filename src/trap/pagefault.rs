@@ -29,7 +29,11 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     unsafe { sstatus::set_sie() };
 
     if !present {
-        let current_sp = frame.x[2];
+        let mut current_sp = frame.x[2];
+        if current_sp > VM_OFFSET {
+            // from user
+            current_sp = current_sp - VM_OFFSET;
+        }
         /*
         kprintln!(
             "user stack base at {:x}, sp at {:x}, accessing {:x}",
@@ -40,8 +44,15 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         kprintln!("{}", current().stack_base.unwrap_or(0) - addr);*/
 
         // growing stack
-        if ((addr > current_sp) && current().stack_base.unwrap_or(0) - addr < MAX_STACK) {
+        kprintln!(
+            "addr at {:x}, base at{:x}, sp at {:x}",
+            addr,
+            current().stack_base.unwrap_or(0),
+            current_sp
+        );
+        if (addr > current_sp && current().stack_base.unwrap_or(0) - addr < MAX_STACK) {
             // panic!("log");
+            kprint!("growing stack to {:x}\n", addr);
             alloc_from_pool(addr);
             return;
         }

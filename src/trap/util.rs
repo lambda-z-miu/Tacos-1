@@ -1,17 +1,19 @@
-use crate::mem::allocdata::*;
+use crate::mem::{allocdata::*, VM_OFFSET};
+use crate::sync::lazy;
 use crate::thread::current;
 use crate::OsError;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::ffi::CStr;
 use core::mem::size_of;
-use core::ptr;
+use core::{panic, ptr};
 use mem::palloc::UserPool;
 use mem::PTEFlags;
 use mem::PG_SIZE;
 use PhysAddr;
 
 const MAX_STACK: usize = 0x800000;
+pub static mut SP: usize = 0;
 
 pub fn check_ptr_valid(va: usize) -> bool {
     // kprintln!("CHECKVALID CALLED at {}", va);
@@ -19,12 +21,18 @@ pub fn check_ptr_valid(va: usize) -> bool {
     let pt_ref = thread.pagetable.as_ref().unwrap().lock();
     let ptentry = pt_ref.get_pte(va);
     if ptentry.is_none() || !ptentry.unwrap().is_valid() {
-        kprintln!("{:x}", current().stack_base.unwrap_or(0xbeef));
-        if current().stack_base.unwrap_or(0) - va < MAX_STACK {
-            kprintln!("CALLED");
-            return true;
+        unsafe {
+            if (current().stack_base.unwrap_or(0) - va <= MAX_STACK && va >= SP) {
+                kprintln!(
+                    "va at {:x}, sp at {:x}, stack base at {:x}",
+                    va,
+                    SP,
+                    current().stack_base.unwrap_or(0)
+                );
+                return true;
+            }
+            return false;
         }
-        return false;
     }
     return true;
 }
@@ -93,6 +101,7 @@ pub fn alloc_from_pool(addr: usize) {
     flag.set(PTEFlags::R, true);
     flag.set(PTEFlags::U, true);
     flag.set(PTEFlags::W, true);
+    flag.set(PTEFlags::D, false);
     current().pagetable.as_ref().unwrap().lock().map(
         PhysAddr::from(va_alloc),
         addr - (addr % PG_SIZE),
