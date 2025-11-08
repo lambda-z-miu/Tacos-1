@@ -42,13 +42,6 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     unsafe { sstatus::set_sie() };
 
     if !present {
-        if let Some(entry) = current().pagetable.as_ref().unwrap().lock().get_pte(addr) {
-            if !entry.is_valid() {
-                panic!("???");
-            }
-        } else {
-            kprintln!("No PTE found for addr 0x{:x}", addr);
-        }
         let mut current_sp = frame.x[2];
         if current_sp > VM_OFFSET {
             // from user
@@ -97,26 +90,8 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     let thread = current();
                     let pt = thread.pagetable.as_ref().unwrap();
                     pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();
-                    pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_ronly();
-                    kprintln!(
-                        "{} validity",
-                        pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().is_valid()
-                    );
                     // to track if it is modified later
                 }
-                return;
-            }
-        }
-    } else {
-        for i in current().mmap_info.lock().iter_mut() {
-            if i.in_map(addr) {
-                // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
-                for j in 0..i.pages {
-                    let thread = current();
-                    let pt = thread.pagetable.as_ref().unwrap();
-                    pt.lock().get_pte(addr).unwrap().set_write();
-                }
-                i.dirty_mmap = true;
                 return;
             }
         }

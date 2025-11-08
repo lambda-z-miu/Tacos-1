@@ -28,7 +28,6 @@ pub struct MmapData {
     pub fd: u32,
     pub len: u64,
     pub need_close: bool,
-    pub dirty_mmap: bool,
 }
 
 impl MmapData {
@@ -90,7 +89,6 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
         fd: fd,
         len: size,
         need_close: false,
-        dirty_mmap: false,
     };
 
     let thread = current();
@@ -144,16 +142,11 @@ pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
                     .lock()
                     .get_pte(base + i * PG_SIZE)
                 {
-                    kprintln!(
-                        "page {} dirty bit {}",
-                        i,
-                        found_page.is_dirty() && found_page.is_valid()
-                    );
                     dirty |= (found_page.is_dirty() && found_page.is_valid());
                 }
             }
 
-            if item.dirty_mmap {
+            if dirty {
                 kprintln!("WB CALLED");
                 let pos_mem = fscall::tell_handler(item.fd)?;
                 fscall::write_handler(item.fd, item.addr as *const u8, item.len as usize);
