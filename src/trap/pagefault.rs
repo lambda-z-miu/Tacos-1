@@ -1,3 +1,5 @@
+use core::panic;
+
 use self::util::*;
 use crate::mem::allocdata::AllocType;
 use crate::mem::allocdata::PageInfo;
@@ -16,6 +18,17 @@ use riscv::register::sstatus::{self, SPP};
 const MAX_STACK: usize = 0x800000;
 
 pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
+    kprintln!(
+        "REPORT : Page fault at {:#x}:  error {} page",
+        addr,
+        match fault {
+            StorePageFault => "writing",
+            LoadPageFault => "reading",
+            InstructionPageFault => "fetching instruction",
+            _ => panic!("Unknown Page Fault"),
+        },
+    );
+
     let privilege = frame.sstatus.spp();
 
     let present = {
@@ -29,6 +42,13 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     unsafe { sstatus::set_sie() };
 
     if !present {
+        if let Some(entry) = current().pagetable.as_ref().unwrap().lock().get_pte(addr) {
+            if !entry.is_valid() {
+                panic!("???");
+            }
+        } else {
+            kprintln!("No PTE found for addr 0x{:x}", addr);
+        }
         let mut current_sp = frame.x[2];
         if current_sp > VM_OFFSET {
             // from user
@@ -67,11 +87,36 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     // kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
                     alloc_from_pool(i.addr + j * PG_SIZE);
 
+                    let pos_mem = fscall::tell_handler(i.fd).unwrap_or(-1);
+                    if pos_mem < 0 {
+                        panic!("Tell failed in page fault handler");
+                    }
                     fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
+                    fscall::seek_handler(i.fd, pos_mem as u32);
+
                     let thread = current();
                     let pt = thread.pagetable.as_ref().unwrap();
-                    pt.lock().get_pte(addr).unwrap().set_clean();
+                    pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();
+                    pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_ronly();
+                    kprintln!(
+                        "{} validity",
+                        pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().is_valid()
+                    );
+                    // to track if it is modified later
                 }
+                return;
+            }
+        }
+    } else {
+        for i in current().mmap_info.lock().iter_mut() {
+            if i.in_map(addr) {
+                // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
+                for j in 0..i.pages {
+                    let thread = current();
+                    let pt = thread.pagetable.as_ref().unwrap();
+                    pt.lock().get_pte(addr).unwrap().set_write();
+                }
+                i.dirty_mmap = true;
                 return;
             }
         }

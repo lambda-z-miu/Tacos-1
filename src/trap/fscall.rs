@@ -79,13 +79,12 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> Result<isize, OsErr
         return Ok(0); //zero reading is permited
     }
     /*
-    for i in 0..len {
-        unsafe {
-            kprintln!("{}", *(buf.wrapping_add(i)));
+        for i in 0..len {
+            unsafe {
+                kprintln!("WRITING {}", *(buf.wrapping_add(i)));
+            }
         }
-    }
     */
-
     let thread = current();
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?; // file not exist
