@@ -7,7 +7,8 @@ use crate::mem::palloc::UserPool;
 use crate::mem::userbuf::{
     __knrl_read_usr_byte_pc, __knrl_read_usr_exit, __knrl_write_usr_byte_pc, __knrl_write_usr_exit,
 };
-use crate::mem::{Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
+use crate::mem::PG_MASK;
+use crate::mem::{swapmanager, swapmem, Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
 use crate::thread::{self, current};
 use crate::trap::{flags, fscall, syscall, util, Frame};
 use crate::userproc;
@@ -18,6 +19,7 @@ use riscv::register::sstatus::{self, SPP};
 const MAX_STACK: usize = 0x800000;
 
 pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
+    /*
     kprintln!(
         "REPORT : Page fault at {:#x}:  error {} page",
         addr,
@@ -27,12 +29,12 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             InstructionPageFault => "fetching instruction",
             _ => panic!("Unknown Page Fault"),
         },
-    );
+    );*/
 
     let privilege = frame.sstatus.spp();
 
+    let mut table = unsafe { PageTable::effective_pagetable() };
     let present = {
-        let table = unsafe { PageTable::effective_pagetable() };
         match table.get_pte(addr) {
             Some(entry) => entry.is_valid(),
             None => false,
@@ -42,6 +44,30 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     unsafe { sstatus::set_sie() };
 
     if !present {
+        let mut found_page = false;
+        let addr_base = addr - (addr % PG_SIZE);
+        {
+            let swap_table = swapmanager::SWAP_TABLE.lock();
+            for i in swap_table.iter() {
+                // kprintln!("addr {:x}", i.addr);
+                if i.addr == addr_base {
+                    found_page = true;
+                    assert!(i.state != swapmanager::MemState::InMem);
+                    break;
+                }
+            }
+        }
+        if found_page {
+            // kprintln!("ENTERED");
+            let mut victim = swapmanager::select_page();
+            // kprintln!("chosen");
+            swapmem::swapout_pt(victim as *mut u8, &mut table);
+            // kprintln!("out");
+            swapmem::swapin(addr_base);
+            // kprintln!("found fault page");
+            return;
+        }
+
         let mut current_sp = frame.x[2];
         if current_sp > VM_OFFSET {
             // from user

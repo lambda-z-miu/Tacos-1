@@ -9,7 +9,7 @@ Boot HART MEDELEG         : 0x0000000000f0b509
 [[38;2;129;165;113;1m37 ms[0m] Executing command page-parallel
 [[38;2;129;165;113;1m61 ms[0m] handler called 0x3 0x1cc0 0x804fff70 0x0
 [[38;2;129;165;113;1m76 ms[0m] panicked at src/mem/palloc.rs:79:9:
-internal error: entered unreachable code: memory is exhausted
+internal eror: entered unreachable code: memory is exhausted
 Running mmap-read ... PASSED
 Running pt-bad-addr ... PASSED
 Running mmap-over-data ... PASSED

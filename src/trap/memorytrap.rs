@@ -1,4 +1,4 @@
-use crate::mem::allocdata::*;
+use crate::mem::{allocdata::*, swapmanager};
 use alloc::alloc::dealloc;
 
 use crate::{

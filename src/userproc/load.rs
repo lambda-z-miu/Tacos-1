@@ -1,3 +1,6 @@
+use core::panic::AssertUnwindSafe;
+
+use crate::mem::{swapmanager, swapmem};
 use alloc::vec;
 use elf_rs::{Elf, ElfFile, ProgramHeaderEntry, ProgramHeaderFlags, ProgramType};
 
@@ -92,7 +95,32 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
 
     // Allocate & map pages
     for p in 0..pages {
-        let buf = unsafe { UserPool::alloc_pages(1) };
+        // kprintln!("LOAD A PAGE at {:x}", ubase + p * PG_SIZE);
+        let mut buf;
+        unsafe {
+            buf = UserPool::alloc_pages(1);
+            if buf.is_some() {
+                // kprintln!("buf at {:x}", buf.unwrap() as usize);
+            }
+            if buf.is_none() {
+                let addr = swapmanager::select_page();
+
+                // add to kernel PT
+                // let pte = pagetable.get_pte(addr).unwrap();
+                //  pte.set_write();
+                // let mut current_pt = unsafe { PageTable::effective_pagetable() };
+                // current_pt.map(pte.pa(), addr as usize, 1, pte.flag());
+
+                swapmem::swapout_pt(addr as *mut u8, pagetable);
+                buf = UserPool::alloc_pages(1);
+                if buf.is_some() {
+                    // kprintln!("buf at {:x}", buf.unwrap() as usize);
+                }
+                // kprintln!("REALLOC SUCC {}", buf.unwrap() as usize);
+            }
+        }
+        let buf = buf.expect("msg");
+
         let page = unsafe { (buf as *mut [u8; PG_SIZE]).as_mut().unwrap() };
 
         // Read `readsz` bytes, fill remaining bytes with 0.
@@ -104,6 +132,11 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
         // when user process exits. No manual resource collect is required.
         let uaddr = ubase + p * PG_SIZE;
         pagetable.map(buf.into(), uaddr, 1, leaf_flag);
+
+        let slot = swapmanager::get_slot();
+        swapmanager::register(uaddr, swapmanager::MemState::InMem, leaf_flag, slot);
+        // kprintln!("Registered uaddr {:x}", uaddr);
+
         let thread = current();
         let mut pageinfo = thread.page_info.lock();
         pageinfo.push(PageInfo {
@@ -123,7 +156,16 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
     assert!(init_sp % PG_SIZE == 0, "initial sp address misaligns");
 
     // Allocate a page from UserPool as user stack.
-    let stack_va = unsafe { UserPool::alloc_pages(1) };
+    let mut stack_va;
+    unsafe {
+        stack_va = UserPool::alloc_pages(1);
+        if stack_va.is_none() {
+            let addr = swapmanager::select_page();
+            swapmem::swapout_pt(addr as *mut u8, pagetable);
+            stack_va = UserPool::alloc_pages(1);
+        }
+    }
+    let stack_va = stack_va.expect("msg");
     let stack_pa = PhysAddr::from(stack_va);
 
     // Get the start address of stack page

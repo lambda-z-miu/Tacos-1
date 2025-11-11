@@ -1,4 +1,4 @@
-use crate::mem::{allocdata::*, VM_OFFSET};
+use crate::mem::{allocdata::*, swapmanager, swapmem, VM_OFFSET};
 use crate::sync::lazy;
 use crate::thread::current;
 use crate::OsError;
@@ -117,7 +117,16 @@ pub fn parse_arg(argv: *const *const u8) -> Vec<String> {
 }
 
 pub fn alloc_from_pool(addr: usize) {
-    let va_alloc = unsafe { UserPool::alloc_pages(1) };
+    let mut va_alloc;
+    unsafe {
+        va_alloc = UserPool::alloc_pages(1);
+        if va_alloc.is_none() {
+            let addr = swapmanager::select_page();
+            swapmem::swapout(addr as *mut u8);
+            va_alloc = UserPool::alloc_pages(1);
+        }
+    }
+    let va_alloc = va_alloc.expect("msg");
     let thread = current();
     let mut pageinfo = thread.page_info.lock();
     pageinfo.push(PageInfo {
@@ -136,4 +145,6 @@ pub fn alloc_from_pool(addr: usize) {
         1,
         flag,
     );
+    let slot = swapmanager::get_slot();
+    swapmanager::register(addr, swapmanager::MemState::InMem, flag, slot);
 }

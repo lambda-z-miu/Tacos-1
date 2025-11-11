@@ -12,6 +12,8 @@ pub mod layout;
 pub mod malloc;
 pub mod pagetable;
 pub mod palloc;
+pub mod swapmanager;
+pub mod swapmem;
 pub mod userbuf;
 mod utils;
 

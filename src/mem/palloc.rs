@@ -2,7 +2,7 @@
 
 use core::cmp::min;
 
-use crate::mem::utils::*;
+use crate::mem::{swapmanager, swapmem, utils::*};
 use crate::sync::{Intr, Lazy, Mutex};
 
 // BuddyAllocator allocates at most `1<<MAX_ORDER` pages at a time
@@ -54,7 +54,7 @@ impl BuddyAllocator {
     }
 
     /// Allocate n pages and returns the virtual address.
-    unsafe fn alloc(&mut self, n: usize) -> *mut u8 {
+    unsafe fn alloc(&mut self, n: usize) -> Option<*mut u8> {
         assert!(n <= 1 << MAX_ORDER, "request is too large");
 
         let order = n.next_power_of_two().trailing_zeros() as usize;
@@ -72,11 +72,10 @@ impl BuddyAllocator {
                     }
                 }
                 self.allocated += 1 << order;
-                return self.free_lists[order].pop().unwrap().cast();
+                return Some(self.free_lists[order].pop().unwrap().cast());
             }
         }
-
-        unreachable!("memory is exhausted");
+        return None;
     }
 
     /// Deallocate a chunk of pages
@@ -107,7 +106,6 @@ impl BuddyAllocator {
                 break;
             }
         }
-
         self.allocated -= 1 << order;
     }
 }
@@ -125,7 +123,7 @@ impl Palloc {
 
     /// Allocate n pages of a consecutive memory segment
     pub unsafe fn alloc(n: usize) -> *mut u8 {
-        Self::instance().lock().alloc(n)
+        Self::instance().lock().alloc(n).expect("memory exhaulsted")
     }
 
     /// Free n pages of memory starting at `ptr`
@@ -146,8 +144,8 @@ unsafe impl Sync for UserPool {}
 
 impl UserPool {
     /// Allocate n pages of consecutive space
-    pub unsafe fn alloc_pages(n: usize) -> *mut u8 {
-        Self::instance().lock().alloc(n)
+    pub unsafe fn alloc_pages(n: usize) -> Option<*mut u8> {
+        return Self::instance().lock().alloc(n);
     }
 
     /// Free n pages of memory starting at `ptr`
