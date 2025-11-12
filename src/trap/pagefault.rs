@@ -1,4 +1,5 @@
 use core::panic;
+use core::slice::from_raw_parts;
 
 use self::util::*;
 use crate::mem::allocdata::AllocType;
@@ -19,18 +20,6 @@ use riscv::register::sstatus::{self, SPP};
 const MAX_STACK: usize = 0x800000;
 
 pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
-    /*
-    kprintln!(
-        "REPORT : Page fault at {:#x}:  error {} page",
-        addr,
-        match fault {
-            StorePageFault => "writing",
-            LoadPageFault => "reading",
-            InstructionPageFault => "fetching instruction",
-            _ => panic!("Unknown Page Fault"),
-        },
-    );*/
-
     let privilege = frame.sstatus.spp();
 
     let mut table = unsafe { PageTable::effective_pagetable() };
@@ -40,34 +29,86 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             None => false,
         }
     };
-
+    /*
+        kprintln!(
+            "REPORT : Page fault at {:#x}:  error {} page , {} error",
+            addr,
+            match fault {
+                StorePageFault => "writing",
+                LoadPageFault => "reading",
+                InstructionPageFault => "fetching instruction",
+                _ => panic!("Unknown Page Fault"),
+            },
+            if present { "right" } else { "not present" }
+        );
+    */
     unsafe { sstatus::set_sie() };
 
     if !present {
         let mut found_page = false;
         let addr_base = addr - (addr % PG_SIZE);
         {
-            let swap_table = swapmanager::SWAP_TABLE.lock();
+            let thread = current();
+            let swap_table = thread.swap_table.lock();
             for i in swap_table.iter() {
                 // kprintln!("addr {:x}", i.addr);
                 if i.addr == addr_base {
                     found_page = true;
-                    assert!(i.state != swapmanager::MemState::InMem);
+                    assert!(
+                        i.state != swapmanager::MemState::InMem,
+                        "error at {:x}",
+                        addr
+                    );
                     break;
                 }
             }
         }
+
         if found_page {
             // kprintln!("ENTERED");
             let mut victim = swapmanager::select_page();
-            // kprintln!("chosen");
+            assert!(victim % PG_SIZE == 0);
+
+            if victim == 0x1000 {
+                unsafe {
+                    let thread = current();
+                    let kva = thread
+                        .pagetable
+                        .as_ref()
+                        .unwrap()
+                        .lock()
+                        .get_pte(0x1000)
+                        .unwrap()
+                        .pa()
+                        .into_va();
+                    let p = core::slice::from_raw_parts(kva as *const u8, 4096);
+                    for i in p {
+                        // kprint!("{:x} ", i);
+                    }
+                }
+            }
             swapmem::swapout_pt(victim as *mut u8, &mut table);
-            // kprintln!("out");
             swapmem::swapin(addr_base);
-            // kprintln!("found fault page");
+            unsafe {
+                riscv::asm::sfence_vma_all();
+
+                // 如果是指令页缺页，必须刷新 I-Cache
+                if fault == InstructionPageFault {
+                    core::arch::asm!("fence.i");
+                }
+            }
+            if addr_base == 0x1000 {
+                unsafe {
+                    let p = from_raw_parts(addr as *const u8, 4096);
+                    for i in p {
+                        // kprint!("{:x} ", i);
+                    }
+                    kprintln!("");
+                }
+            }
             return;
         }
-
+        kprintln!("PAGE NOT FOUND");
         let mut current_sp = frame.x[2];
         if current_sp > VM_OFFSET {
             // from user

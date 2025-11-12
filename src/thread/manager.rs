@@ -1,5 +1,6 @@
 //! Manager of all kernel threads
 
+use alloc::collections::vec_deque::VecDeque;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::mem;
@@ -38,6 +39,7 @@ impl Manager {
                 None,
                 None,
                 Vec::new(),
+                VecDeque::new(),
             ));
             unsafe { (bootstack as *mut usize).write(MAGIC) };
             initial.set_status(Status::Running);

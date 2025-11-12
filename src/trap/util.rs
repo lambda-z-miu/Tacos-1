@@ -122,7 +122,7 @@ pub fn alloc_from_pool(addr: usize) {
         va_alloc = UserPool::alloc_pages(1);
         if va_alloc.is_none() {
             let addr = swapmanager::select_page();
-            swapmem::swapout(addr as *mut u8);
+            // swapmem::swapout(addr as *mut u8);
             va_alloc = UserPool::alloc_pages(1);
         }
     }
@@ -145,6 +145,6 @@ pub fn alloc_from_pool(addr: usize) {
         1,
         flag,
     );
-    let slot = swapmanager::get_slot();
-    swapmanager::register(addr, swapmanager::MemState::InMem, flag, slot);
+
+    swapmanager::register(addr, swapmanager::MemState::InMem, flag, None);
 }

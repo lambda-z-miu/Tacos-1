@@ -15,7 +15,6 @@ pub fn swapin(inpage: usize) {
     // get info from swaptable
     let pos = get_page_pos(inpage).expect("swap in page not in swap file");
     let flags = get_page_flags(inpage);
-    assert!(flags.contains(PTEFlags::V));
     assert!(get_page_state(inpage) == MemState::Swapped);
 
     // allocate a page, then read the page from swap file
@@ -38,7 +37,8 @@ pub fn swapin(inpage: usize) {
             // kprintln!("  Buffer byte[0] after read: {:#x}", after);
         }
         // register swaptable
-        register(inpage, MemState::InMem, flags, pos as u32);
+        clean_ste(inpage);
+        register(inpage, MemState::InMem, flags, Some(pos));
 
         // map in pt
         let thread = current();
@@ -54,80 +54,15 @@ pub fn swapin(inpage: usize) {
     // kprintln!("SWAPFILELOCK REL BY SWAPIN");
 }
 
-pub fn swapout(outpage: *mut u8) {
-    assert!(outpage as usize % PG_SIZE == 0);
-    let tmp = interrupt::set(false);
-    let thread = current();
-    unsafe {
-        kprintln!(
-            "byte 4080 state {}",
-            *((outpage as usize + 4080) as *mut u8)
-        );
-    }
-
-    let mut pt = thread.pagetable.as_ref().unwrap().lock();
-
-    // get PTE, ensure validity, add to kernel PT
-    let mut pte = pt.get_pte(outpage as usize).expect("not in mem");
-
-    // get PA and transfer;
-    let pa = pte.pa().value();
-    let kva = pa + crate::mem::layout::VM_OFFSET;
-
-    // finding a slot
-    let slot = get_page_pos(outpage as usize);
-    let mut pos;
-    if let Some(slot) = slot {
-        pos = slot;
-    } else {
-        pos = get_slot();
-    }
-
-    // write to swap file, then dealloc page
-    // kprintln!("SWAPFILELOCK ACC BY SWAPOUT_PT at {:x}", kva as usize);
-    let mut swapfile = Swap::lock();
-
-    {
-        swapfile.set_pos(pos);
-        unsafe {
-            assert!(kva as usize % PG_SIZE == 0);
-            if (swapfile
-                .write(from_raw_parts(kva as *const u8, PG_SIZE))
-                .expect("error when writing swap file")
-                != PG_SIZE)
-            {
-                panic!("error when writing swap file");
-            }
-        }
-    }
-
-    register(outpage as usize, MemState::Swapped, pte.flag(), pos);
-    unsafe {
-        riscv::asm::sfence_vma_all();
-    }
-
-    // invalidate kernel and user PTE
-    pte.set_invalid();
-    unsafe {
-        riscv::asm::sfence_vma_all();
-    }
-
-    unsafe {
-        UserPool::dealloc_pages(kva as *mut u8, 1);
-        riscv::asm::sfence_vma_all();
-    }
-
-    interrupt::set(tmp);
-}
-
 pub fn swapout_pt(outpage: *mut u8, pt: &mut PageTable) {
     assert!(outpage as usize % PG_SIZE == 0);
+    if outpage as usize == 0x1000 {
+        kprintln!("SWAPOUT");
+    }
     let tmp = interrupt::set(false);
 
-    // get PTE, ensure validity, add to kernel PT
+    // get PTE, PA, kernel VA
     let mut pte = pt.get_pte(outpage as usize).expect("not in mem");
-
-    // get PA and transfer;
     let pa = pte.pa().value();
     let kva = pa + crate::mem::layout::VM_OFFSET;
 
@@ -138,34 +73,28 @@ pub fn swapout_pt(outpage: *mut u8, pt: &mut PageTable) {
     }
 
     // finding a slot
-    let slot = get_page_pos(outpage as usize);
-    let mut pos;
-    if let Some(slot) = slot {
-        pos = slot;
-    } else {
-        pos = get_slot();
-    }
+    let pos = get_slot();
 
     // write to swap file, then dealloc page
-    // kprintln!("SWAPFILELOCK ACC BY SWAPOUT_PT at {:x}", kva as usize);
+
     let mut swapfile = Swap::lock();
 
-    {
-        swapfile.set_pos(pos);
-        unsafe {
-            assert!(kva as usize % PG_SIZE == 0);
-            if (swapfile
-                .write(from_raw_parts(kva as *const u8, PG_SIZE))
-                .expect("error when writing swap file")
-                != PG_SIZE)
-            {
-                panic!("error when writing swap file");
-            }
+    swapfile.set_pos(pos);
+    unsafe {
+        assert!(kva as usize % PG_SIZE == 0);
+        if (swapfile
+            .write(from_raw_parts(kva as *const u8, PG_SIZE))
+            .expect("error when writing swap file")
+            != PG_SIZE)
+        {
+            panic!("error when writing swap file");
         }
     }
 
     // regist at swaptable
-    register(outpage as usize, MemState::Swapped, pte.flag(), pos);
+    clean_ste(outpage as usize);
+    register(outpage as usize, MemState::Swapped, pte.flag(), Some(pos));
+
     unsafe {
         riscv::asm::sfence_vma_all();
     }

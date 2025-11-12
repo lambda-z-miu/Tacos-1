@@ -1,6 +1,7 @@
 use core::panic::AssertUnwindSafe;
 
 use crate::mem::{swapmanager, swapmem};
+use crate::trap::flags;
 use alloc::vec;
 use elf_rs::{Elf, ElfFile, ProgramHeaderEntry, ProgramHeaderFlags, ProgramType};
 
@@ -95,7 +96,7 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
 
     // Allocate & map pages
     for p in 0..pages {
-        // kprintln!("LOAD A PAGE at {:x}", ubase + p * PG_SIZE);
+        // kprintln!("LOAD A PAGE {:?}", phdr);
         let mut buf;
         unsafe {
             buf = UserPool::alloc_pages(1);
@@ -133,8 +134,18 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
         let uaddr = ubase + p * PG_SIZE;
         pagetable.map(buf.into(), uaddr, 1, leaf_flag);
 
-        let slot = swapmanager::get_slot();
-        swapmanager::register(uaddr, swapmanager::MemState::InMem, leaf_flag, slot);
+        swapmanager::register(uaddr, swapmanager::MemState::InMem, leaf_flag, None);
+
+        let kva = pagetable.get_pte(uaddr).unwrap().pa().into_va();
+        if uaddr == 0x1000 {
+            unsafe {
+                let p = core::slice::from_raw_parts(kva as *const u8, 4096);
+                for i in p {
+                    // kprint!("{:x} ", i);
+                }
+                kprintln!("LODED at {:X}", PhysAddr::from(buf).value());
+            }
+        }
         // kprintln!("Registered uaddr {:x}", uaddr);
 
         let thread = current();
@@ -165,11 +176,16 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
             stack_va = UserPool::alloc_pages(1);
         }
     }
-    let stack_va = stack_va.expect("msg");
-    let stack_pa = PhysAddr::from(stack_va);
+
+    let flags = PTEFlags::V | PTEFlags::R | PTEFlags::W | PTEFlags::U;
+
+    let stack_va = stack_va.expect("succ after feeing a page");
+
+    let stack_pa = PhysAddr::from(stack_va as usize);
 
     // Get the start address of stack page
     let stack_page_begin = PageAlign::floor(init_sp - 1);
+    swapmanager::register(stack_page_begin, swapmanager::MemState::InMem, flags, None);
 
     let thread = current();
     let mut pageinfo = thread.page_info.lock();
@@ -179,7 +195,6 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
     });
 
     // Install mapping
-    let flags = PTEFlags::V | PTEFlags::R | PTEFlags::W | PTEFlags::U;
     pagetable.map(stack_pa, stack_page_begin, PG_SIZE, flags);
 
     #[cfg(feature = "debug")]

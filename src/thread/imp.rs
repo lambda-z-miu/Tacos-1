@@ -2,8 +2,10 @@
 
 use crate::fs::disk::{DiskFs, DISKFS};
 use crate::mem::allocdata::{self, PageInfo};
+use crate::mem::swapmanager::SwapTableEntry;
 use crate::trap::flags::FdFlags;
 use alloc::boxed::Box;
+use alloc::collections::vec_deque::VecDeque;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -50,6 +52,7 @@ pub struct Thread {
     pub stack_base: Option<usize>,
     pub page_info: Mutex<Vec<PageInfo>>,
     pub mmap_info: Mutex<Vec<MmapData>>,
+    pub swap_table: Mutex<VecDeque<SwapTableEntry>>,
 }
 
 impl Thread {
@@ -62,9 +65,17 @@ impl Thread {
         pagetable: Option<PageTable>,
         stack_base: Option<usize>,
         page_info: Vec<PageInfo>,
+        swap_table: VecDeque<SwapTableEntry>,
     ) -> Self {
         /// The next thread's id
         static TID: AtomicIsize = AtomicIsize::new(0);
+        for i in swap_table.iter() {
+            /*kprintln!(
+                "page at {:x} in swap table, fo {:x}",
+                i.addr,
+                i.file_off.unwrap_or(0xbeef)
+            );*/
+        }
 
         Thread {
             tid: TID.fetch_add(1, SeqCst),
@@ -82,6 +93,7 @@ impl Thread {
             stack_base: stack_base,
             page_info: Mutex::new(page_info),
             mmap_info: Mutex::new(Vec::new()),
+            swap_table: Mutex::new(swap_table),
         }
     }
 
@@ -165,6 +177,7 @@ pub struct Builder {
     pagetable: Option<PageTable>,
     stack_end: Option<usize>,
     page_info: Vec<PageInfo>,
+    swap_table: VecDeque<SwapTableEntry>,
 }
 
 impl Builder {
@@ -183,11 +196,17 @@ impl Builder {
             pagetable: None,
             stack_end: None,
             page_info: Vec::new(),
+            swap_table: VecDeque::new(),
         }
     }
 
     pub fn pageinfo(mut self, page_record: Vec<PageInfo>) -> Self {
         self.page_info = page_record;
+        self
+    }
+
+    pub fn swaptable(mut self, swaptable: VecDeque<SwapTableEntry>) -> Self {
+        self.swap_table = swaptable;
         self
     }
 
@@ -232,6 +251,7 @@ impl Builder {
                 self.pagetable,
                 self.stack_end,
                 self.page_info,
+                self.swap_table,
             )
         })
     }

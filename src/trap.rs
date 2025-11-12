@@ -99,7 +99,7 @@ pub extern "C" fn trap_handler(frame: &mut Frame) {
 
         Exception(InstructionFault) | Exception(IllegalInstruction) => {
             // TODO: kill user process but not panic kernel
-            panic!("Instruction failure");
+            panic!("Instruction failure fetching {:x}", frame.sepc);
         }
 
         Exception(f @ LoadPageFault)

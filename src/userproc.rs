@@ -3,6 +3,7 @@
 
 mod load;
 
+use alloc::borrow::ToOwned;
 use alloc::collections::btree_map::Entry;
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -140,6 +141,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         .pagetable(pt)
         .userproc(userproc)
         .set_stack((argv_base as usize))
+        .swaptable(current().swap_table.lock().to_owned())
         .pageinfo(current().page_info.lock().to_vec())
         .spawn()
         .id()

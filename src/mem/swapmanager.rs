@@ -1,7 +1,13 @@
+use core::panic;
+
+use crate::fs::disk::Swap;
 use crate::mem::PTEFlags;
 use crate::mem::PG_SIZE;
 use crate::sync::Lazy;
 use crate::sync::Mutex;
+use crate::thread;
+use crate::thread::current;
+use alloc::collections::btree_map::BTreeMap;
 use alloc::collections::vec_deque::VecDeque;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -10,39 +16,52 @@ pub enum MemState {
     Swapped,
     Exe,
 }
-
+#[derive(Clone)]
 pub struct SwapTableEntry {
     pub addr: usize,
     pub state: MemState,
     pub flags: PTEFlags,
-    pub file_off: u32,
+    pub file_off: Option<u32>,
 }
 
-pub static SWAP_TABLE: Lazy<Mutex<VecDeque<SwapTableEntry>>> =
-    Lazy::new(|| Mutex::new(VecDeque::new()));
+static BLOCK_MAP: Lazy<Mutex<BTreeMap<u32, usize>>> = Lazy::new(|| Mutex::new(BTreeMap::new()));
 
 pub fn get_slot() -> u32 {
-    let swap_table = SWAP_TABLE.lock();
-    /*
-    for i in 0..swap_table.len() {
-        if swap_table[i].state == MemState::InMem {
-            return (i * PG_SIZE) as u32;
+    let mut pos = 0;
+    while (true) {
+        let mut blockmap = BLOCK_MAP.lock();
+        if blockmap.get(&pos).is_none() {
+            return pos;
         }
-    }*/
-    return (swap_table.len() * PG_SIZE) as u32;
+        pos += (PG_SIZE as u32);
+    }
+    panic!("unreachable");
 }
 
-pub fn register(page: usize, state: MemState, flags: PTEFlags, file_off: u32) {
-    let mut swap_table = SWAP_TABLE.lock();
-    for i in swap_table.iter_mut() {
+pub fn clean_ste(page: usize) {
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
+    swap_table.retain(|x| x.addr != page);
+}
+
+pub fn register(page: usize, state: MemState, flags: PTEFlags, file_off: Option<u32>) {
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
+    for i in swap_table.iter() {
         if i.addr == page {
-            i.state = state;
-            i.flags = flags;
-            i.file_off = file_off;
-            // kprintln!("page {:x}, state OVERWRITEN", page);
-            return;
+            panic!("conflic item");
         }
     }
+    // kprintln!("INSERTED IN SWAP TABLE");
+
+    if state == MemState::InMem && file_off.is_some() {
+        let mut blockmap = BLOCK_MAP.lock();
+        blockmap.remove(&file_off.unwrap());
+    } else if state == MemState::Swapped {
+        let mut blockmap = BLOCK_MAP.lock();
+        blockmap.insert(file_off.unwrap(), page);
+    }
+
     swap_table.push_back(SwapTableEntry {
         addr: page,
         state,
@@ -52,17 +71,19 @@ pub fn register(page: usize, state: MemState, flags: PTEFlags, file_off: u32) {
 }
 
 pub fn get_page_pos(page: usize) -> Option<u32> {
-    let swap_table = SWAP_TABLE.lock();
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
     for i in 0..swap_table.len() {
         if swap_table[i].addr == page {
-            return Some((i * PG_SIZE) as u32);
+            return swap_table[i].file_off;
         }
     }
     return None;
 }
 
 pub fn get_page_flags(page: usize) -> PTEFlags {
-    let swap_table = SWAP_TABLE.lock();
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
     for i in swap_table.iter() {
         if i.addr == page {
             return i.flags;
@@ -72,7 +93,8 @@ pub fn get_page_flags(page: usize) -> PTEFlags {
 }
 
 pub fn get_page_state(page: usize) -> MemState {
-    let swap_table = SWAP_TABLE.lock();
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
     for i in swap_table.iter() {
         if i.addr == page {
             return i.state;
@@ -83,7 +105,8 @@ pub fn get_page_state(page: usize) -> MemState {
 
 pub fn select_page() -> usize {
     static mut POSMEM: usize = 0;
-    let swap_table = SWAP_TABLE.lock();
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
     let len = swap_table.len();
     unsafe {
         for i in POSMEM..len {
