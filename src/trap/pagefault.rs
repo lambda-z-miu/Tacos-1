@@ -5,7 +5,7 @@ use self::util::*;
 use crate::mem::allocdata::AllocType;
 use crate::mem::allocdata::PageInfo;
 use crate::mem::palloc::UserPool;
-use crate::mem::swapmanager::SWAP_TABLE;
+use crate::mem::swapmanager::GLB_SWM;
 use crate::mem::userbuf::{
     __knrl_read_usr_byte_pc, __knrl_read_usr_exit, __knrl_write_usr_byte_pc, __knrl_write_usr_exit,
 };
@@ -36,7 +36,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             None => false,
         }
     };
-
+    /*
     kprintln!(
         "REPORT : Page fault at {:#x}:  error {} page , {} error in thread {}",
         addr,
@@ -48,140 +48,141 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         },
         if present { "right" } else { "not present" },
         current().id()
-    );
+    );*/
 
     // kprintln!("current in {}", current().id());
 
-    unsafe { sstatus::set_sie() };
+    unsafe {
+        sstatus::set_sie();
 
-    if !present {
-        let mut found_page = false;
-        let addr_base = addr - (addr % PG_SIZE);
-        {
-            let thread = current();
-            let swap_table = SWAP_TABLE.lock();
-            for i in swap_table.iter() {
-                //kprintln!("addr {:x} thread {}", i.addr.1, i.addr.0);
-                if i.addr.1 == addr_base && i.addr.0 == current().id() {
-                    found_page = true;
-                    // kprint!("FP");
-                    /*
-                    assert!(
-                        i.state != swapmanager::MemState::InMem,
-                        "error at {:x}",
-                        addr
-                    );*/
-                    break;
+        if !present {
+            let mut found_page = false;
+            let addr_base = addr - (addr % PG_SIZE);
+            {
+                let thread = current();
+                let swap_table = &mut GLB_SWM.lock().swaptable;
+                for i in swap_table.iter() {
+                    //kprintln!("addr {:x} thread {}", i.addr.1, i.addr.0);
+                    if i.addr.1 == addr_base && i.addr.0 == current().id() {
+                        found_page = true;
+                        // kprint!("FP");
+                        /*
+                        assert!(
+                            i.state != swapmanager::MemState::InMem,
+                            "error at {:x}",
+                            addr
+                        );*/
+                        break;
+                    }
                 }
             }
-        }
 
-        if found_page {
-            // kprintln!("ENTERED");
-            unsafe {
-                PFHLOCK.acquire();
-            }
-            let mut victim = swapmanager::select_page();
-            assert!(victim.1 % PG_SIZE == 0);
-
-            if victim.1 == 0x1000 {
+            if found_page {
+                // kprintln!("ENTERED");
                 unsafe {
-                    let thread = current();
-                    let kva = thread
-                        .pagetable
-                        .as_ref()
-                        .unwrap()
-                        .lock()
-                        .get_pte(0x1000)
-                        .unwrap()
-                        .pa()
-                        .into_va();
-                    let p = core::slice::from_raw_parts(kva as *const u8, 4096);
-                    for i in p {
-                        // kprint!("{:x} ", i);
+                    PFHLOCK.acquire();
+                }
+                let mut victim = swapmanager::select_page();
+                assert!(victim.1 % PG_SIZE == 0);
+
+                if victim.1 == 0x1000 {
+                    unsafe {
+                        let thread = current();
+                        let kva = thread
+                            .pagetable
+                            .as_ref()
+                            .unwrap()
+                            .lock()
+                            .get_pte(0x1000)
+                            .unwrap()
+                            .pa()
+                            .into_va();
+                        let p = core::slice::from_raw_parts(kva as *const u8, 4096);
+                        for i in p {
+                            // kprint!("{:x} ", i);
+                        }
                     }
                 }
-            }
-            swapmem::swapout_pt(victim, None);
-            swapmem::swapin((current().id(), addr_base));
-            unsafe {
-                PFHLOCK.release();
-            }
-            unsafe {
-                riscv::asm::sfence_vma_all();
-
-                // 如果是指令页缺页，必须刷新 I-Cache
-                if fault == InstructionPageFault {
-                    core::arch::asm!("fence.i");
-                }
-            }
-            if addr_base == 0x1000 {
+                swapmem::swapout_pt(victim, None);
+                swapmem::swapin((current().id(), addr_base));
                 unsafe {
-                    let p = from_raw_parts(addr_base as *const u8, 4096);
-                    for i in p {
-                        // kprint!("{:x} ", i);
-                    }
-                    kprintln!("");
+                    PFHLOCK.release();
                 }
+                unsafe {
+                    riscv::asm::sfence_vma_all();
+
+                    // 如果是指令页缺页，必须刷新 I-Cache
+                    if fault == InstructionPageFault {
+                        core::arch::asm!("fence.i");
+                    }
+                }
+                if addr_base == 0x1000 {
+                    unsafe {
+                        let p = from_raw_parts(addr_base as *const u8, 4096);
+                        for i in p {
+                            // kprint!("{:x} ", i);
+                        }
+                        kprintln!("");
+                    }
+                }
+
+                return;
+            }
+            kprintln!("PAGE NOT FOUND");
+            let mut current_sp = frame.x[2];
+            if current_sp > VM_OFFSET {
+                // from user
+                current_sp = current_sp - VM_OFFSET;
+            }
+            /*
+            kprintln!(
+                "user stack base at {:x}, sp at {:x}, accessing {:x}",
+                current().stack_base.unwrap_or(0xbeef),
+                current_sp,
+                addr
+            );
+            kprintln!("{}", current().stack_base.unwrap_or(0) - addr);*/
+
+            // growing stack
+            kprintln!(
+                "addr at {:x}, base at{:x}, sp at {:x}",
+                addr,
+                current().stack_base.unwrap_or(0),
+                current_sp
+            );
+            let base = current().stack_base.unwrap_or(0);
+            if (addr > current_sp && base < addr + MAX_STACK && addr < base) {
+                // panic!("log");
+                kprint!("growing stack to {:x}\n", addr);
+                alloc_from_pool(addr);
+                return;
             }
 
-            return;
-        }
-        kprintln!("PAGE NOT FOUND");
-        let mut current_sp = frame.x[2];
-        if current_sp > VM_OFFSET {
-            // from user
-            current_sp = current_sp - VM_OFFSET;
-        }
-        /*
-        kprintln!(
-            "user stack base at {:x}, sp at {:x}, accessing {:x}",
-            current().stack_base.unwrap_or(0xbeef),
-            current_sp,
-            addr
-        );
-        kprintln!("{}", current().stack_base.unwrap_or(0) - addr);*/
+            // lazy allocating mmap region
+            kprintln!("0x{:x} needed", addr);
+            for i in current().mmap_info.lock().iter() {
+                if i.in_map(addr) {
+                    // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
+                    for j in 0..i.pages {
+                        // kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
+                        alloc_from_pool(i.addr + j * PG_SIZE);
 
-        // growing stack
-        kprintln!(
-            "addr at {:x}, base at{:x}, sp at {:x}",
-            addr,
-            current().stack_base.unwrap_or(0),
-            current_sp
-        );
-        let base = current().stack_base.unwrap_or(0);
-        if (addr > current_sp && base < addr + MAX_STACK && addr < base) {
-            // panic!("log");
-            kprint!("growing stack to {:x}\n", addr);
-            alloc_from_pool(addr);
-            return;
-        }
+                        let pos_mem = fscall::tell_handler(i.fd).unwrap_or(-1);
+                        if pos_mem < 0 {
+                            panic!("Tell failed in page fault handler");
+                        }
+                        fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
+                        fscall::seek_handler(i.fd, pos_mem as u32);
 
-        // lazy allocating mmap region
-        kprintln!("0x{:x} needed", addr);
-        for i in current().mmap_info.lock().iter() {
-            if i.in_map(addr) {
-                // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
-                for j in 0..i.pages {
-                    // kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
-                    alloc_from_pool(i.addr + j * PG_SIZE);
-
-                    let pos_mem = fscall::tell_handler(i.fd).unwrap_or(-1);
-                    if pos_mem < 0 {
-                        panic!("Tell failed in page fault handler");
+                        let thread = current();
+                        let pt = thread.pagetable.as_ref().unwrap();
+                        pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();
+                        // to track if it is modified later
                     }
-                    fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
-                    fscall::seek_handler(i.fd, pos_mem as u32);
-
-                    let thread = current();
-                    let pt = thread.pagetable.as_ref().unwrap();
-                    pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();
-                    // to track if it is modified later
                 }
             }
         }
     }
-
     kprintln!(
         "Page fault at {:#x}: {} error {} page in {} context.",
         addr,
