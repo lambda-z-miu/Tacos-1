@@ -23,7 +23,7 @@ pub struct Manager {
     /// The current running thread
     pub current: Mutex<Arc<Thread>>,
     /// All alive and not yet destroyed threads
-    all: Mutex<Vec<Arc<Thread>>>,
+    pub all: Mutex<Vec<Arc<Thread>>>,
 }
 
 impl Manager {
@@ -39,7 +39,7 @@ impl Manager {
                 None,
                 None,
                 Vec::new(),
-                VecDeque::new(),
+                0xbeef,
             ));
             unsafe { (bootstack as *mut usize).write(MAGIC) };
             initial.set_status(Status::Running);

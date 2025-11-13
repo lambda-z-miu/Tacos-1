@@ -5,6 +5,7 @@ use self::util::*;
 use crate::mem::allocdata::AllocType;
 use crate::mem::allocdata::PageInfo;
 use crate::mem::palloc::UserPool;
+use crate::mem::swapmanager::SWAP_TABLE;
 use crate::mem::userbuf::{
     __knrl_read_usr_byte_pc, __knrl_read_usr_exit, __knrl_write_usr_byte_pc, __knrl_write_usr_exit,
 };
@@ -30,18 +31,19 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         }
     };
     /*
-        kprintln!(
-            "REPORT : Page fault at {:#x}:  error {} page , {} error",
-            addr,
-            match fault {
-                StorePageFault => "writing",
-                LoadPageFault => "reading",
-                InstructionPageFault => "fetching instruction",
-                _ => panic!("Unknown Page Fault"),
-            },
-            if present { "right" } else { "not present" }
-        );
-    */
+    kprintln!(
+        "REPORT : Page fault at {:#x}:  error {} page , {} error",
+        addr,
+        match fault {
+            StorePageFault => "writing",
+            LoadPageFault => "reading",
+            InstructionPageFault => "fetching instruction",
+            _ => panic!("Unknown Page Fault"),
+        },
+        if present { "right" } else { "not present" }
+    );*/
+    // kprintln!("current in {}", current().id());
+
     unsafe { sstatus::set_sie() };
 
     if !present {
@@ -49,16 +51,18 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         let addr_base = addr - (addr % PG_SIZE);
         {
             let thread = current();
-            let swap_table = thread.swap_table.lock();
+            let swap_table = SWAP_TABLE.lock();
             for i in swap_table.iter() {
-                // kprintln!("addr {:x}", i.addr);
-                if i.addr == addr_base {
+                //kprintln!("addr {:x} thread {}", i.addr.1, i.addr.0);
+                if i.addr.1 == addr_base && i.addr.0 == current().id() {
                     found_page = true;
+                    // kprint!("FP");
+                    /*
                     assert!(
                         i.state != swapmanager::MemState::InMem,
                         "error at {:x}",
                         addr
-                    );
+                    );*/
                     break;
                 }
             }
@@ -67,9 +71,9 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         if found_page {
             // kprintln!("ENTERED");
             let mut victim = swapmanager::select_page();
-            assert!(victim % PG_SIZE == 0);
+            assert!(victim.1 % PG_SIZE == 0);
 
-            if victim == 0x1000 {
+            if victim.1 == 0x1000 {
                 unsafe {
                     let thread = current();
                     let kva = thread
@@ -87,8 +91,8 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     }
                 }
             }
-            swapmem::swapout_pt(victim as *mut u8, &mut table);
-            swapmem::swapin(addr_base);
+            swapmem::swapout_pt(victim, None);
+            swapmem::swapin((current().id(), addr_base));
             unsafe {
                 riscv::asm::sfence_vma_all();
 
@@ -99,7 +103,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             }
             if addr_base == 0x1000 {
                 unsafe {
-                    let p = from_raw_parts(addr as *const u8, 4096);
+                    let p = from_raw_parts(addr_base as *const u8, 4096);
                     for i in p {
                         // kprint!("{:x} ", i);
                     }

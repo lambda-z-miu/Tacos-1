@@ -5,6 +5,7 @@ mod load;
 
 use alloc::borrow::ToOwned;
 use alloc::collections::btree_map::Entry;
+use alloc::collections::vec_deque::VecDeque;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -15,8 +16,9 @@ use riscv::register::sstatus;
 
 use crate::fs::{self, File};
 use crate::mem::pagetable::KernelPgTable;
+use crate::mem::swapmanager::SwapTableEntry;
 use crate::sync::{sleep, Lock};
-use crate::thread::{self, current, Status, Thread};
+use crate::thread::{self, current, Status, Thread, TID};
 use crate::trap::{trap_exit_u, Frame};
 use core::sync::atomic::Ordering::SeqCst;
 
@@ -49,8 +51,9 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     // to access kernel code and data during syscall without the need to
     // switch pagetables.
     let mut pt = KernelPgTable::clone();
+    let next_tid = TID.fetch_add(1, SeqCst);
 
-    let exec_info = match load::load_executable(&mut file, &mut pt) {
+    let exec_info = match load::load_executable(&mut file, &mut pt, next_tid) {
         Ok(x) => x,
         Err(_) => unsafe {
             pt.destroy();
@@ -141,7 +144,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         .pagetable(pt)
         .userproc(userproc)
         .set_stack((argv_base as usize))
-        .swaptable(current().swap_table.lock().to_owned())
+        .tag(next_tid)
         .pageinfo(current().page_info.lock().to_vec())
         .spawn()
         .id()
@@ -205,6 +208,8 @@ pub fn start(mut frame: Frame) -> ! {
 
     // Set kernel stack pointer to intr frame and then jump to `trap_exit_u()`.
     let kernal_sp = (&frame as *const Frame) as usize;
+    // kprintln!("REACHED END OF START");
+    // kprintln!("TID {}", current().id());
 
     unsafe {
         asm!(
