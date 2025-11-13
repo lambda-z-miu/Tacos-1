@@ -70,14 +70,15 @@ pub fn register(
 ) {
     let thread = current();
     let tid = thread.id();
-    /*
+
     kprintln!(
         "reg from {}, register {:x} as {} at {:x}",
         page.0,
         page.1,
         state,
         file_off.unwrap_or(0xdeedbeef)
-    );*/
+    );
+
     let mut swap_table = SWAP_TABLE.lock();
     let mut filepos = file_off;
     for i in swap_table.iter() {

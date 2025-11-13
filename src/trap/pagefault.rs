@@ -11,6 +11,11 @@ use crate::mem::userbuf::{
 };
 use crate::mem::PG_MASK;
 use crate::mem::{swapmanager, swapmem, Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
+use crate::sbi::interrupt;
+use crate::sync::Lock;
+use crate::sync::Sleep;
+use crate::sync::Spin;
+use crate::thread::manager;
 use crate::thread::{self, current};
 use crate::trap::{flags, fscall, syscall, util, Frame};
 use crate::userproc;
@@ -19,6 +24,7 @@ use riscv::register::scause::Exception::{self, *};
 use riscv::register::sstatus::{self, SPP};
 
 const MAX_STACK: usize = 0x800000;
+static mut PFHLOCK: Spin = Spin::new();
 
 pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     let privilege = frame.sstatus.spp();
@@ -30,9 +36,9 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             None => false,
         }
     };
-    /*
+
     kprintln!(
-        "REPORT : Page fault at {:#x}:  error {} page , {} error",
+        "REPORT : Page fault at {:#x}:  error {} page , {} error in thread {}",
         addr,
         match fault {
             StorePageFault => "writing",
@@ -40,8 +46,10 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             InstructionPageFault => "fetching instruction",
             _ => panic!("Unknown Page Fault"),
         },
-        if present { "right" } else { "not present" }
-    );*/
+        if present { "right" } else { "not present" },
+        current().id()
+    );
+
     // kprintln!("current in {}", current().id());
 
     unsafe { sstatus::set_sie() };
@@ -70,6 +78,9 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
 
         if found_page {
             // kprintln!("ENTERED");
+            unsafe {
+                PFHLOCK.acquire();
+            }
             let mut victim = swapmanager::select_page();
             assert!(victim.1 % PG_SIZE == 0);
 
@@ -94,6 +105,9 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             swapmem::swapout_pt(victim, None);
             swapmem::swapin((current().id(), addr_base));
             unsafe {
+                PFHLOCK.release();
+            }
+            unsafe {
                 riscv::asm::sfence_vma_all();
 
                 // 如果是指令页缺页，必须刷新 I-Cache
@@ -110,6 +124,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     kprintln!("");
                 }
             }
+
             return;
         }
         kprintln!("PAGE NOT FOUND");
@@ -163,7 +178,6 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();
                     // to track if it is modified later
                 }
-                return;
             }
         }
     }

@@ -68,7 +68,6 @@ pub fn swapout_pt(outpage: (isize, usize), pt: Option<&mut PageTable>) {
     if outpage.1 == 0x1000 {
         // kprintln!("SWAPOUT");
     }
-    let tmp = interrupt::set(false);
 
     // get PTE, PA, kernel VA
     let evict_va = get_page_kva(outpage);
@@ -135,6 +134,4 @@ pub fn swapout_pt(outpage: (isize, usize), pt: Option<&mut PageTable>) {
         UserPool::dealloc_pages(kva as *mut u8, 1);
         riscv::asm::sfence_vma_all();
     }
-
-    interrupt::set(tmp);
 }
