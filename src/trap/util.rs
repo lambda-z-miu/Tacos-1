@@ -1,6 +1,6 @@
-use crate::mem::{allocdata::*, swapmanager, swapmem, VM_OFFSET};
-use crate::sync::lazy;
-use crate::thread::current;
+use crate::mem::{allocdata::*, swapmanager, swapmanager::MemState, swapmem, VM_OFFSET};
+use crate::sync::{lazy, Lock};
+use crate::thread::{self, current};
 use crate::OsError;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -146,5 +146,15 @@ pub fn alloc_from_pool(addr: usize) {
         flag,
     );
 
-    swapmanager::register(addr, swapmanager::MemState::InMem, flag, None);
+    let thread = current();
+    let mut swap_table = thread.swap_table.lock();
+    swapmanager::register_swaptable(&mut swap_table, addr, MemState::InMem, flag, None);
+    swapmanager::register(
+        addr,
+        current().id(),
+        swapmanager::MemState::InMem,
+        flag,
+        None,
+        Some(va_alloc as usize),
+    );
 }

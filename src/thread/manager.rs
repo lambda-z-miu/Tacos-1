@@ -23,10 +23,20 @@ pub struct Manager {
     /// The current running thread
     pub current: Mutex<Arc<Thread>>,
     /// All alive and not yet destroyed threads
-    all: Mutex<Vec<Arc<Thread>>>,
+    pub all: Mutex<Vec<Arc<Thread>>>,
 }
 
 impl Manager {
+    pub fn get_by_tid(tid: isize) -> Option<Arc<Thread>> {
+        let mng = Manager::get();
+        let all = mng.all.lock();
+        for t in all.iter() {
+            if t.id() == tid {
+                return Some(t.clone());
+            }
+        }
+        None
+    }
     pub fn get() -> &'static Self {
         static TMANAGER: Lazy<Manager> = Lazy::new(|| {
             // Manully create initial thread.
@@ -40,6 +50,7 @@ impl Manager {
                 None,
                 Vec::new(),
                 VecDeque::new(),
+                -1,
             ));
             unsafe { (bootstack as *mut usize).write(MAGIC) };
             initial.set_status(Status::Running);
@@ -55,6 +66,7 @@ impl Manager {
             })
             .name("Idle")
             .priority(PRI_MIN)
+            .thread_id(-2)
             .build();
             manager.register(idle);
 

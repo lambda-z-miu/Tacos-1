@@ -5,6 +5,7 @@ mod load;
 
 use alloc::borrow::ToOwned;
 use alloc::collections::btree_map::Entry;
+use alloc::collections::vec_deque::VecDeque;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -49,8 +50,10 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     // to access kernel code and data during syscall without the need to
     // switch pagetables.
     let mut pt = KernelPgTable::clone();
+    let nextid = crate::thread::imp::TID.fetch_add(1, SeqCst);
 
-    let exec_info = match load::load_executable(&mut file, &mut pt) {
+    let mut swap_table_usr = VecDeque::new();
+    let exec_info = match load::load_executable(&mut file, &mut pt, nextid, &mut swap_table_usr) {
         Ok(x) => x,
         Err(_) => unsafe {
             pt.destroy();
@@ -141,8 +144,9 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         .pagetable(pt)
         .userproc(userproc)
         .set_stack((argv_base as usize))
-        .swaptable(current().swap_table.lock().to_owned())
+        .swaptable(swap_table_usr)
         .pageinfo(current().page_info.lock().to_vec())
+        .thread_id(nextid)
         .spawn()
         .id()
 }

@@ -1,5 +1,6 @@
 use crate::mem::{PageTable, PhysAddr};
 use crate::sbi::interrupt;
+use crate::sync::Lock;
 
 use alloc::slice;
 
@@ -7,9 +8,11 @@ use crate::fs::disk::Swap;
 use crate::io::{Read, Write};
 use crate::mem::palloc::{Palloc, UserPool};
 use crate::mem::{swapmanager::*, PTEFlags, PG_SIZE};
-use crate::thread::{self, current};
+use crate::thread::{self, current, manager};
 use crate::trap::fscall;
+use alloc::collections::VecDeque;
 use core::slice::{from_raw_parts, from_raw_parts_mut};
+use core::{fmt, panic};
 pub fn swapin(inpage: usize) {
     assert!(inpage as usize % PG_SIZE == 0);
     // get info from swaptable
@@ -24,6 +27,7 @@ pub fn swapin(inpage: usize) {
     unsafe {
         let addr = UserPool::alloc_pages(1).expect("a page should have been evicted");
         assert!(addr as usize % PG_SIZE == 0);
+        // kprintln!("REACHED3 in thread {}", current().id());
         if (swapfile
             .read(from_raw_parts_mut(addr, PG_SIZE))
             .expect("error when reading swap file")
@@ -32,13 +36,24 @@ pub fn swapin(inpage: usize) {
             panic!("error when reading swap file");
         }
 
-        unsafe {
-            let after = *((addr as usize) as *const u8);
-            // kprintln!("  Buffer byte[0] after read: {:#x}", after);
-        }
         // register swaptable
-        clean_ste(inpage);
-        register(inpage, MemState::InMem, flags, Some(pos));
+        let thread = current();
+        let mut swap_table = thread.swap_table.lock();
+
+        // MNGLOCK.acquire();
+        clean_ste(&mut swap_table, inpage);
+        register_swaptable(&mut swap_table, inpage, MemState::InMem, flags, None);
+
+        // register global info
+        register(
+            inpage,
+            current().id(),
+            MemState::InMem,
+            flags,
+            Some(pos),
+            Some(addr as usize),
+        );
+        // MNGLOCK.release();
 
         // map in pt
         let thread = current();
@@ -54,61 +69,156 @@ pub fn swapin(inpage: usize) {
     // kprintln!("SWAPFILELOCK REL BY SWAPIN");
 }
 
-pub fn swapout_pt(outpage: *mut u8, pt: &mut PageTable) {
-    assert!(outpage as usize % PG_SIZE == 0);
-    if outpage as usize == 0x1000 {
-        kprintln!("SWAPOUT");
-    }
-    let tmp = interrupt::set(false);
+pub fn swapout_pt(
+    outpage: (usize, isize),
+    pt: Option<&mut PageTable>,
+    swaptable: Option<&mut VecDeque<SwapTableEntry>>,
+) {
+    assert!(outpage.0 % PG_SIZE == 0);
 
     // get PTE, PA, kernel VA
-    let mut pte = pt.get_pte(outpage as usize).expect("not in mem");
-    let pa = pte.pa().value();
-    let kva = pa + crate::mem::layout::VM_OFFSET;
 
-    unsafe {
-        let first_16 = core::slice::from_raw_parts(kva as *const u8, 16);
-
-        let byte_4080 = *((kva) as *const u8);
-    }
-
-    // finding a slot
+    let mut found = false;
+    let mut kva;
     let pos = get_slot();
 
-    // write to swap file, then dealloc page
+    let thread = manager::Manager::get_by_tid(outpage.1);
 
-    let mut swapfile = Swap::lock();
-
-    swapfile.set_pos(pos);
-    unsafe {
-        assert!(kva as usize % PG_SIZE == 0);
-        if (swapfile
-            .write(from_raw_parts(kva as *const u8, PG_SIZE))
-            .expect("error when writing swap file")
-            != PG_SIZE)
+    if let Some(i) = thread {
+        // operating a thread that already exists
+        found = true;
+        let mut pte_flag;
         {
-            panic!("error when writing swap file");
+            // get PTE
+            let pagetable = i.pagetable.as_ref().unwrap();
+            let pt = pagetable.lock();
+            let pte = pt.get_pte(outpage.0);
+            let pte = pte.unwrap();
+
+            // extract info, invalidate
+            pte_flag = pte.flag();
+            kva = pte.pa().into_va();
+            pte.set_invalid();
+            unsafe {
+                riscv::asm::sfence_vma_all();
+            }
         }
+        {
+            let mut swap_table = i.swap_table.lock();
+            clean_ste(&mut swap_table, outpage.0 as usize);
+            register_swaptable(
+                &mut swap_table,
+                outpage.0,
+                MemState::Swapped,
+                pte_flag,
+                Some(pos),
+            );
+        }
+
+        {
+            let mut swapfile = Swap::lock();
+            swapfile.set_pos(pos);
+            unsafe {
+                assert!(kva as usize % PG_SIZE == 0);
+                if (swapfile
+                    .write(from_raw_parts(kva as *const u8, PG_SIZE))
+                    .expect("error when writing swap file")
+                    != PG_SIZE)
+                {
+                    panic!("error when writing swap file");
+                }
+            }
+        }
+
+        // regist at swaptable
+        // MNGLOCK.acquire();
+
+        // regist global info
+        register(
+            outpage.0,
+            outpage.1,
+            MemState::Swapped,
+            pte_flag,
+            Some(pos),
+            None,
+        );
+        // MNGLOCK.release();
+
+        unsafe {
+            UserPool::dealloc_pages(kva as *mut u8, 1);
+        }
+    } else {
+        if pt.is_none() {
+            panic!("cannot get page table");
+        }
+
+        let pt = pt.unwrap();
+
+        // invalidate, extract info
+        let pte = pt.get_pte(outpage.0).expect("pte should exist");
+        kva = pte.pa().into_va();
+        let pte_flag = pte.flag();
+        pte.set_invalid();
+
+        let mut swapfile = Swap::lock();
+        swapfile.set_pos(pos);
+        unsafe {
+            assert!(kva as usize % PG_SIZE == 0);
+            if (swapfile
+                .write(from_raw_parts(kva as *const u8, PG_SIZE))
+                .expect("error when writing swap file")
+                != PG_SIZE)
+            {
+                panic!("error when writing swap file");
+            }
+        }
+
+        unsafe {
+            UserPool::dealloc_pages(kva as *mut u8, 1);
+        }
+
+        // regist at swaptable
+        // MNGLOCK.acquire();
+        let mut swaptable = swaptable.unwrap();
+        clean_ste(&mut swaptable, outpage.0);
+        register_swaptable(
+            &mut swaptable,
+            outpage.0,
+            MemState::Swapped,
+            pte_flag,
+            Some(pos),
+        );
+
+        // regist global info
+        register(
+            outpage.0,
+            outpage.1,
+            MemState::Swapped,
+            pte_flag,
+            Some(pos),
+            None,
+        );
+        // MNGLOCK.release();
     }
 
-    // regist at swaptable
-    clean_ste(outpage as usize);
-    register(outpage as usize, MemState::Swapped, pte.flag(), Some(pos));
+    // finding a slot, write to swap file
+    // kprintln!("L130 REACHED By thread {}", current().id());
 
-    unsafe {
-        riscv::asm::sfence_vma_all();
-    }
+    /*
 
-    // invalidate kernel and user PTE
-    pte.set_invalid();
-    unsafe {
-        riscv::asm::sfence_vma_all();
-    }
+        unsafe {
+            riscv::asm::sfence_vma_all();
+        }
 
-    unsafe {
-        UserPool::dealloc_pages(kva as *mut u8, 1);
-        riscv::asm::sfence_vma_all();
-    }
+        // invalidate kernel and user PTE
+        // pte.set_invalid();
+        unsafe {
+            riscv::asm::sfence_vma_all();
+        }
 
-    interrupt::set(tmp);
+        unsafe {
+            UserPool::dealloc_pages(kva as *mut u8, 1);
+            riscv::asm::sfence_vma_all();
+        }
+    */
 }

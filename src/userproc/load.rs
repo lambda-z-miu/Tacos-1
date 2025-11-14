@@ -1,7 +1,10 @@
 use core::panic::AssertUnwindSafe;
 
+use crate::mem::swapmanager::{SwapTableEntry, MNGLOCK};
 use crate::mem::{swapmanager, swapmem};
+use crate::sync::Lock;
 use crate::trap::flags;
+use alloc::collections::VecDeque;
 use alloc::vec;
 use elf_rs::{Elf, ElfFile, ProgramHeaderEntry, ProgramHeaderFlags, ProgramType};
 
@@ -30,11 +33,16 @@ pub(super) struct ExecInfo {
 /// On success, returns `Ok(usize, usize)`:
 /// - arg0: the entry point of user program
 /// - arg1: the initial sp of user program
-pub(super) fn load_executable(file: &mut File, pagetable: &mut PageTable) -> Result<ExecInfo> {
-    let exec_info = load_elf(file, pagetable)?;
+pub(super) fn load_executable(
+    file: &mut File,
+    pagetable: &mut PageTable,
+    nexttid: isize,
+    swaptable: &mut VecDeque<SwapTableEntry>,
+) -> Result<ExecInfo> {
+    let exec_info = load_elf(file, pagetable, nexttid, swaptable)?;
 
     // Initialize user stack.
-    init_user_stack(pagetable, exec_info.init_sp);
+    init_user_stack(pagetable, exec_info.init_sp, nexttid, swaptable);
 
     // Forbid modifying executable file when running
     file.deny_write();
@@ -43,7 +51,12 @@ pub(super) fn load_executable(file: &mut File, pagetable: &mut PageTable) -> Res
 }
 
 /// Parses the specified executable file and loads segments
-fn load_elf(file: &mut File, pagetable: &mut PageTable) -> Result<ExecInfo> {
+fn load_elf(
+    file: &mut File,
+    pagetable: &mut PageTable,
+    tid: isize,
+    swaptable: &mut VecDeque<SwapTableEntry>,
+) -> Result<ExecInfo> {
     // Ensure cursor is at the beginning
     file.rewind()?;
 
@@ -59,7 +72,7 @@ fn load_elf(file: &mut File, pagetable: &mut PageTable) -> Result<ExecInfo> {
     // load each loadable segment into memory
     elf.program_header_iter()
         .filter(|p| p.ph_type() == ProgramType::LOAD)
-        .for_each(|p| load_segment(&buf, &p, pagetable));
+        .for_each(|p| load_segment(&buf, &p, pagetable, tid, swaptable));
 
     Ok(ExecInfo {
         entry_point: elf.elf_header().entry_point() as _,
@@ -68,7 +81,13 @@ fn load_elf(file: &mut File, pagetable: &mut PageTable) -> Result<ExecInfo> {
 }
 
 /// Loads one segment and installs pagetable mappings
-fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageTable) {
+fn load_segment(
+    filebuf: &[u8],
+    phdr: &ProgramHeaderEntry,
+    pagetable: &mut PageTable,
+    nexttid: isize,
+    swaptable: &mut VecDeque<SwapTableEntry>,
+) {
     assert_eq!(phdr.ph_type(), ProgramType::LOAD);
 
     // Meaningful contents of this segment starts from `fileoff`.
@@ -111,8 +130,8 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
                 //  pte.set_write();
                 // let mut current_pt = unsafe { PageTable::effective_pagetable() };
                 // current_pt.map(pte.pa(), addr as usize, 1, pte.flag());
-
-                swapmem::swapout_pt(addr as *mut u8, pagetable);
+                kprintln!("chosen addr {:x} of thread {} to swap out", addr.0, addr.1);
+                swapmem::swapout_pt(addr, Some(pagetable), Some(swaptable));
                 buf = UserPool::alloc_pages(1);
                 if buf.is_some() {
                     // kprintln!("buf at {:x}", buf.unwrap() as usize);
@@ -134,7 +153,23 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
         let uaddr = ubase + p * PG_SIZE;
         pagetable.map(buf.into(), uaddr, 1, leaf_flag);
 
-        swapmanager::register(uaddr, swapmanager::MemState::InMem, leaf_flag, None);
+        // MNGLOCK.acquire();
+        swapmanager::register_swaptable(
+            swaptable,
+            uaddr,
+            swapmanager::MemState::InMem,
+            leaf_flag,
+            None,
+        );
+        swapmanager::register(
+            uaddr,
+            nexttid,
+            swapmanager::MemState::InMem,
+            leaf_flag,
+            None,
+            Some(buf as usize),
+        );
+        // MNGLOCK.release();
 
         let kva = pagetable.get_pte(uaddr).unwrap().pa().into_va();
         if uaddr == 0x1000 {
@@ -163,7 +198,12 @@ fn load_segment(filebuf: &[u8], phdr: &ProgramHeaderEntry, pagetable: &mut PageT
 }
 
 /// Initializes the user stack.
-fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
+fn init_user_stack(
+    pagetable: &mut PageTable,
+    init_sp: usize,
+    nexttid: isize,
+    swaptable: &mut VecDeque<SwapTableEntry>,
+) {
     assert!(init_sp % PG_SIZE == 0, "initial sp address misaligns");
 
     // Allocate a page from UserPool as user stack.
@@ -172,7 +212,7 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
         stack_va = UserPool::alloc_pages(1);
         if stack_va.is_none() {
             let addr = swapmanager::select_page();
-            swapmem::swapout_pt(addr as *mut u8, pagetable);
+            swapmem::swapout_pt(addr, Some(pagetable), Some(swaptable));
             stack_va = UserPool::alloc_pages(1);
         }
     }
@@ -185,7 +225,24 @@ fn init_user_stack(pagetable: &mut PageTable, init_sp: usize) {
 
     // Get the start address of stack page
     let stack_page_begin = PageAlign::floor(init_sp - 1);
-    swapmanager::register(stack_page_begin, swapmanager::MemState::InMem, flags, None);
+
+    // MNGLOCK.acquire();
+    swapmanager::register_swaptable(
+        swaptable,
+        stack_page_begin,
+        swapmanager::MemState::InMem,
+        flags,
+        None,
+    );
+    swapmanager::register(
+        stack_page_begin,
+        nexttid,
+        swapmanager::MemState::InMem,
+        flags,
+        None,
+        Some(stack_va as usize),
+    );
+    // MNGLOCK.release();
 
     let thread = current();
     let mut pageinfo = thread.page_info.lock();

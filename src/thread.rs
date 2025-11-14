@@ -1,6 +1,6 @@
 //! Kernel Threads
 
-mod imp;
+pub mod imp;
 pub mod manager;
 pub mod scheduler;
 pub mod switch;

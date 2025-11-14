@@ -10,6 +10,7 @@ use crate::mem::userbuf::{
 };
 use crate::mem::PG_MASK;
 use crate::mem::{swapmanager, swapmem, Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
+use crate::sync::Lock;
 use crate::thread::{self, current};
 use crate::trap::{flags, fscall, syscall, util, Frame};
 use crate::userproc;
@@ -29,19 +30,20 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             None => false,
         }
     };
-    /*
-        kprintln!(
-            "REPORT : Page fault at {:#x}:  error {} page , {} error",
-            addr,
-            match fault {
-                StorePageFault => "writing",
-                LoadPageFault => "reading",
-                InstructionPageFault => "fetching instruction",
-                _ => panic!("Unknown Page Fault"),
-            },
-            if present { "right" } else { "not present" }
-        );
-    */
+
+    kprintln!(
+        "REPORT : Page fault at {:#x}:  error {} page , {} error, from thread {}",
+        addr,
+        match fault {
+            StorePageFault => "writing",
+            LoadPageFault => "reading",
+            InstructionPageFault => "fetching instruction",
+            _ => panic!("Unknown Page Fault"),
+        },
+        if present { "right" } else { "not present" },
+        current().id()
+    );
+
     unsafe { sstatus::set_sie() };
 
     if !present {
@@ -65,11 +67,10 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         }
 
         if found_page {
-            // kprintln!("ENTERED");
             let mut victim = swapmanager::select_page();
-            assert!(victim % PG_SIZE == 0);
+            assert!(victim.0 % PG_SIZE == 0);
 
-            if victim == 0x1000 {
+            if victim.0 == 0x1000 {
                 unsafe {
                     let thread = current();
                     let kva = thread
@@ -87,7 +88,8 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     }
                 }
             }
-            swapmem::swapout_pt(victim as *mut u8, &mut table);
+            // kprintln!("chosen victim page at {:x} thread {}", victim.0, victim.1);
+            swapmem::swapout_pt(victim, None, None);
             swapmem::swapin(addr_base);
             unsafe {
                 riscv::asm::sfence_vma_all();

@@ -18,7 +18,7 @@ use crate::fs::File;
 use crate::mem::{kalloc, kfree, PageTable, PG_SIZE};
 use crate::sbi::interrupt;
 use crate::sync::{sleep, Semaphore};
-use crate::thread::{current, Manager};
+use crate::thread::{self, current, Manager};
 use crate::trap::memorytrap::MmapData;
 use crate::userproc::UserProc;
 
@@ -29,6 +29,8 @@ pub const STACK_SIZE: usize = PG_SIZE * 4;
 pub const STACK_ALIGN: usize = 16;
 pub const STACK_TOP: usize = 0x80500000;
 pub const MAGIC: usize = 0xdeadbeef;
+
+pub static TID: AtomicIsize = AtomicIsize::new(0);
 
 pub type Mutex<T> = crate::sync::Mutex<T, crate::sync::Intr>;
 const MAX_FD: u32 = 32767;
@@ -66,9 +68,9 @@ impl Thread {
         stack_base: Option<usize>,
         page_info: Vec<PageInfo>,
         swap_table: VecDeque<SwapTableEntry>,
+        thread_id: isize,
     ) -> Self {
         /// The next thread's id
-        static TID: AtomicIsize = AtomicIsize::new(0);
         for i in swap_table.iter() {
             /*kprintln!(
                 "page at {:x} in swap table, fo {:x}",
@@ -78,7 +80,7 @@ impl Thread {
         }
 
         Thread {
-            tid: TID.fetch_add(1, SeqCst),
+            tid: thread_id,
             name,
             stack,
             status: Mutex::new(Status::Ready),
@@ -178,6 +180,7 @@ pub struct Builder {
     stack_end: Option<usize>,
     page_info: Vec<PageInfo>,
     swap_table: VecDeque<SwapTableEntry>,
+    thread_id: isize,
 }
 
 impl Builder {
@@ -197,11 +200,17 @@ impl Builder {
             stack_end: None,
             page_info: Vec::new(),
             swap_table: VecDeque::new(),
+            thread_id: 0xbeef, // dummy
         }
     }
 
     pub fn pageinfo(mut self, page_record: Vec<PageInfo>) -> Self {
         self.page_info = page_record;
+        self
+    }
+
+    pub fn thread_id(mut self, thread_id: isize) -> Self {
+        self.thread_id = thread_id;
         self
     }
 
@@ -252,6 +261,7 @@ impl Builder {
                 self.stack_end,
                 self.page_info,
                 self.swap_table,
+                self.thread_id,
             )
         })
     }
