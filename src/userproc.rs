@@ -208,12 +208,13 @@ pub fn wait(tid: isize) -> Option<isize> {
     let mut exit_code_get = None;
     if let Some(thread) = found {
         thread.completed.down();
-        exit_code_get = thread.exit_code.lock().clone();
+        exit_code_get = thread.exit_code.lock().take();
+        /*
         kprintln!(
             "thread {} exited with {}",
             tid,
             thread.exit_code.lock().unwrap_or(17)
-        );
+        );*/
         thread.completed.up();
     }
 
