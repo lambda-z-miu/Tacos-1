@@ -17,7 +17,7 @@ use riscv::register::sstatus;
 use crate::fs::{self, File};
 use crate::mem::pagetable::KernelPgTable;
 use crate::sync::{sleep, Lock};
-use crate::thread::{self, current, Status, Thread};
+use crate::thread::{self, current, schedule, Status, Thread};
 use crate::trap::{trap_exit_u, Frame};
 use core::sync::atomic::Ordering::SeqCst;
 
@@ -153,22 +153,38 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
 /// Exits a process.
 ///
 /// Panic if the current thread doesn't own a user process.
-pub fn exit(_value: isize) -> ! {
+pub fn exit(value: isize) -> ! {
     // TODO: Lab2.
     let thread = current();
     if thread.userproc.is_none() {
         panic!("cannot exit with no user process");
     } else {
-        thread.completed.up();
-        thread.exit_code.lock().replace(_value);
-        thread.userproc.as_ref().unwrap().bin.allow_write();
         unsafe {
+            kprintln!("put ret value {}", value);
+            thread.userproc.as_ref().unwrap().bin.allow_write();
+
+            thread.mmap_info.lock().clear(); // release all mmap resources
+            thread.swap_table.lock().clear(); // release all swap table entries
+
+            let mut glb_manager = crate::mem::swapmanager::GLB_SWM.lock();
+            glb_manager.frame_table.retain(|x| x.tid != current().id());
+
+            thread.clean_fd(); // release all file descriptor
+
             thread.pagetable.as_ref().unwrap().lock().destroy();
-        } // release all memory resources
-        thread.clean_fd(); // release all file descriptor
-                           // kprintln!("process exited with exit code {}", _value);
+            // release all memory resources
+        }
+        {
+            let mut tmp = thread.exit_code.lock();
+            if tmp.is_some() {
+                kprintln!("exit code {}", tmp.unwrap());
+                panic!("double exit detected");
+            }
+            tmp.replace(value);
+        }
+        thread.completed.up();
+        thread::exit();
     }
-    thread::exit();
 }
 
 /// Waits for a child thread, which must own a user process.
@@ -183,7 +199,7 @@ pub fn wait(tid: isize) -> Option<isize> {
     let list = current().children.lock().clone();
     let mut found: Option<Arc<Thread>> = None;
     for i in list.clone().into_iter() {
-        if i.id() == tid && i.status() != Status::Dying {
+        if i.id() == tid {
             found = Some(i.clone());
             break;
         }
@@ -193,8 +209,12 @@ pub fn wait(tid: isize) -> Option<isize> {
     if let Some(thread) = found {
         thread.completed.down();
         exit_code_get = thread.exit_code.lock().clone();
+        kprintln!(
+            "thread {} exited with {}",
+            tid,
+            thread.exit_code.lock().unwrap_or(17)
+        );
         thread.completed.up();
-        // kprintln!("exited with {}", thread.exit_code.lock().unwrap_or(17))
     }
 
     exit_code_get

@@ -4,6 +4,7 @@
 #![allow(dead_code)]
 
 use crate::fs::disk;
+use crate::thread::current;
 use crate::trap::{fscall, memorytrap, Frame};
 use crate::{fs, sbi};
 use alloc::string::{String, ToString};
@@ -33,11 +34,12 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
 
     kprintln!(
-        "handler called 0x{:x} 0x{:x} 0x{:x} 0x{:x}",
+        "handler called 0x{:x} 0x{:x} 0x{:x} 0x{:x} from {}",
         _id,
         args[0],
         args[1],
-        args[2]
+        args[2],
+        current().id()
     );
     let id = match _id {
         SYS_HALT => sbi::shutdown(),

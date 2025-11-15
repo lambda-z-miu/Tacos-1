@@ -12,7 +12,7 @@ use crate::thread::current;
 use crate::thread::manager;
 use alloc::collections::btree_map::BTreeMap;
 use alloc::collections::vec_deque::VecDeque;
-pub static MNGLOCK: crate::sync::Spin = crate::sync::Spin::new();
+pub static EXITLOCK: crate::sync::Spin = crate::sync::Spin::new();
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum MemState {
@@ -37,16 +37,16 @@ pub struct FrameTableEntry {
     pub busy: bool,
 }
 
-static mut GLB_SWM: Lazy<Mutex<SwapManager>> = Lazy::new(|| {
+pub static mut GLB_SWM: Lazy<Mutex<SwapManager>> = Lazy::new(|| {
     Mutex::new(SwapManager {
         block_map: BTreeMap::new(),
         frame_table: VecDeque::new(),
     })
 });
 
-struct SwapManager {
-    block_map: BTreeMap<u32, usize>,
-    frame_table: VecDeque<FrameTableEntry>,
+pub struct SwapManager {
+    pub block_map: BTreeMap<u32, usize>,
+    pub frame_table: VecDeque<FrameTableEntry>,
 }
 
 pub fn get_slot() -> u32 {
@@ -98,6 +98,7 @@ pub fn register(
     file_off: Option<u32>,
     page_frame: Option<usize>,
 ) {
+    /*
     kprintln!(
         "reg page {:x} state {} file offset {:x} in thread {},pgframe {:x}",
         page_va,
@@ -109,7 +110,7 @@ pub fn register(
         file_off.unwrap_or(0xbeef),
         tid,
         page_frame.unwrap_or(0xbeef)
-    );
+    );*/
     unsafe {
         let mut glb_table = GLB_SWM.lock();
 
@@ -174,8 +175,11 @@ pub fn select_page() -> (usize, isize) {
         let mut glbtb = GLB_SWM.lock();
         let frametb = &mut glbtb.frame_table;
 
+        // kprintln!("{}", frametb.len());
+
         let mut min_time = isize::MAX;
         let mut min_index = 0;
+
         for i in 0..frametb.len() {
             if frametb[i].busy {
                 continue;
@@ -185,6 +189,12 @@ pub fn select_page() -> (usize, isize) {
                 min_index = i;
             }
         }
+
+        if frametb.len() == 0 {
+            kprintln!("called");
+            return (1, 0);
+        }
+
         frametb[min_index].busy = true;
         return (frametb[min_index].stored_va, frametb[min_index].tid);
     }

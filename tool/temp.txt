@@ -1,55 +1,66 @@
-Running open-rdwr ... PASSED
-Running multi-recurse ... PASSED
-Running exec-arg ... PASSED
-Running sc-bad-sp ... PASSED
-Running bad-store2 ... PASSED
-Running bad-jump ... PASSED
-Running write-normal ... PASSED
+Running boundary-bad ... PASSED
+Running read-stdout ... PASSED
+Running exit ... PASSED
+Running boundary-normal ... PASSED
+Running open-many ... PASSED
 Running wait-badpid ... PASSED
-Running read-zero ... PASSED
+Running write-badfd ... PASSED
+Running args-many ... PASSED
+Running open-create ... PASSED
+Running wait-killed ... PASSED
+Running write-zero ... PASSED
+Running write-normal ... PASSED
+Running write-stdin ... PASSED
+Running wait-simple ... PASSED
+Running close-twice ... PASSED
+Running open-invalid ... PASSED
+Running read-normal ... PASSED
+Running multi-recurse ... PASSED
 Running halt ... FAILED
 STDOUT:
-,[[38;2;129;165;113;1m57 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
- [[38;2;129;165;113;1m57 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
-W[[38;2;129;165;113;1m57 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
-o[[38;2;129;165;113;1m57 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
-r[[38;2;129;165;113;1m57 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
-l[[38;2;129;165;113;1m57 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
-d[[38;2;129;165;113;1m58 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
-![[38;2;129;165;113;1m58 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1
+,[[38;2;129;165;113;1m94 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+ [[38;2;129;165;113;1m95 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+W[[38;2;129;165;113;1m95 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+o[[38;2;129;165;113;1m95 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+r[[38;2;129;165;113;1m95 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+l[[38;2;129;165;113;1m96 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+d[[38;2;129;165;113;1m96 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
+![[38;2;129;165;113;1m96 ms[0m] handler called 0x8 0x1 0x804ffee7 0x1 from 0
 
-[[38;2;129;165;113;1m58 ms[0m] handler called 0x1 0xffffffffffffffff 0x804ffee7 0x1
-Running close-stdio ... PASSED
-Running close-badfd ... PASSED
-Running open-create ... PASSED
-Running boundary-bad ... PASSED
-Running open-invalid ... PASSED
-Running read-stdout ... PASSED
-Running exec-invalid ... PASSED
-Running rox-child ... PASSED
+[[38;2;129;165;113;1m97 ms[0m] handler called 0x1 0xffffffffffffffff 0x804ffee7 0x1 from 0
 Running bad-load2 ... PASSED
-Running rox-multichild ... PASSED
-Running write-zero ... PASSED
-Running exit ... PASSED
-Running bad-load ... PASSED
-Running write-stdin ... PASSED
-Running args-many ... PASSED
-Running bad-jump2 ... PASSED
-Running read-badfd ... PASSED
-Running wait-twice ... PASSED
-Running sc-bad-args ... PASSED
-Running close-twice ... PASSED
-Running boundary-normal ... PASSED
-Running exec-multiple ... PASSED
-Running close-normal ... PASSED
-Running open-trunc ... PASSED
-Running read-normal ... PASSED
-Running write-badfd ... PASSED
 Running bad-store ... PASSED
-Running wait-simple ... PASSED
-Running exec-once ... PASSED
+Running exec-multiple ... PASSED
+Running rox-child ... PASSED
+Running wait-twice ... FAILED
+STDOUT:
+1[[38;2;129;165;113;1m152 ms[0m] handler called 0x8 0x2 0x804ffeaf 0x1 from 0
+1[[38;2;129;165;113;1m153 ms[0m] handler called 0x8 0x2 0x804ffedf 0x1 from 0
+
+[[38;2;129;165;113;1m153 ms[0m] handler called 0x2 0x3039 0x804ffedf 0x1 from 0
+[[38;2;129;165;113;1m153 ms[0m] put ret value 12345
+[[38;2;129;165;113;1m154 ms[0m] thread 0 exited with 12345
+[[38;2;129;165;113;1m154 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running close-stdio ... PASSED
 Running args-none ... PASSED
-Running open-many ... PASSED
+Running exec-arg ... PASSED
+Running exec-invalid ... PASSED
+Running sc-bad-sp ... PASSED
+Running close-badfd ... PASSED
+Running bad-store2 ... PASSED
+Running read-badfd ... PASSED
 Running rox-simple ... PASSED
-Running wait-killed ... PASSED
-GRADE: 98/100
+Running open-trunc ... PASSED
+Running bad-jump ... PASSED
+Running bad-jump2 ... PASSED
+Running open-rdwr ... PASSED
+Running sc-bad-args ... PASSED
+Running exec-once ... PASSED
+Running close-normal ... PASSED
+Running read-zero ... PASSED
+Running bad-load ... PASSED
+Running rox-multichild ... PASSED
+GRADE: 96/100

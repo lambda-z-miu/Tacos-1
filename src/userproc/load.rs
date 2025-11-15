@@ -1,6 +1,6 @@
 use core::panic::AssertUnwindSafe;
 
-use crate::mem::swapmanager::{SwapTableEntry, MNGLOCK};
+use crate::mem::swapmanager::SwapTableEntry;
 use crate::mem::{swapmanager, swapmem};
 use crate::sync::Lock;
 use crate::trap::flags;
@@ -130,7 +130,7 @@ fn load_segment(
                 //  pte.set_write();
                 // let mut current_pt = unsafe { PageTable::effective_pagetable() };
                 // current_pt.map(pte.pa(), addr as usize, 1, pte.flag());
-                kprintln!("chosen addr {:x} of thread {} to swap out", addr.0, addr.1);
+                // kprintln!("chosen addr {:x} of thread {} to swap out", addr.0, addr.1);
                 swapmem::swapout_pt(addr, Some(pagetable), Some(swaptable));
                 buf = UserPool::alloc_pages(1);
                 if buf.is_some() {
@@ -172,15 +172,7 @@ fn load_segment(
         // MNGLOCK.release();
 
         let kva = pagetable.get_pte(uaddr).unwrap().pa().into_va();
-        if uaddr == 0x1000 {
-            unsafe {
-                let p = core::slice::from_raw_parts(kva as *const u8, 4096);
-                for i in p {
-                    // kprint!("{:x} ", i);
-                }
-                kprintln!("LODED at {:X}", PhysAddr::from(buf).value());
-            }
-        }
+
         // kprintln!("Registered uaddr {:x}", uaddr);
 
         let thread = current();
