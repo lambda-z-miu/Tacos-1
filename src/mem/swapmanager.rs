@@ -1,4 +1,5 @@
 use core::panic;
+use core::pin;
 use core::sync::atomic::AtomicI64;
 
 use crate::fs::disk::Swap;
@@ -26,6 +27,7 @@ pub struct SwapTableEntry {
     pub state: MemState,
     pub flags: PTEFlags,
     pub file_off: Option<u32>,
+    pub need_pin: bool,
 }
 
 pub static TIMESTAMP: AtomicI64 = AtomicI64::new(0);
@@ -35,6 +37,7 @@ pub struct FrameTableEntry {
     pub tid: isize,
     pub time: isize,
     pub busy: bool,
+    pub ref_cnt: usize,
 }
 
 pub static mut GLB_SWM: Lazy<Mutex<SwapManager>> = Lazy::new(|| {
@@ -64,6 +67,20 @@ pub fn get_slot() -> u32 {
     panic!("unreachable");
 }
 
+pub fn get_pin_flag(swap_table: &VecDeque<SwapTableEntry>, page: usize) -> bool {
+    let mut item = None;
+    for i in swap_table.iter() {
+        if i.addr == page {
+            item = Some(i.clone());
+            break;
+        }
+    }
+    match item {
+        Some(mut entry) => entry.need_pin,
+        None => false,
+    }
+}
+
 pub fn clean_ste(swap_table: &mut VecDeque<SwapTableEntry>, page: usize) {
     swap_table.retain(|x| x.addr != page);
 }
@@ -75,6 +92,7 @@ pub fn register_swaptable(
     state: MemState,
     flags: PTEFlags,
     file_off: Option<u32>,
+    need_pin: bool,
 ) {
     for i in swap_table.iter() {
         if i.addr == va {
@@ -87,6 +105,7 @@ pub fn register_swaptable(
         state,
         flags,
         file_off: file_off,
+        need_pin: need_pin,
     });
 }
 
@@ -97,8 +116,8 @@ pub fn register(
     flags: PTEFlags,
     file_off: Option<u32>,
     page_frame: Option<usize>,
+    ref_cnt: usize,
 ) {
-    /*
     kprintln!(
         "reg page {:x} state {} file offset {:x} in thread {},pgframe {:x}",
         page_va,
@@ -110,7 +129,7 @@ pub fn register(
         file_off.unwrap_or(0xbeef),
         tid,
         page_frame.unwrap_or(0xbeef)
-    );*/
+    );
     unsafe {
         let mut glb_table = GLB_SWM.lock();
 
@@ -130,6 +149,7 @@ pub fn register(
                 tid,
                 time: TIMESTAMP.fetch_add(1, core::sync::atomic::Ordering::SeqCst) as isize,
                 busy: false,
+                ref_cnt: ref_cnt,
             });
         } else if state == MemState::Swapped {
             frame_table.retain(|x| x.stored_va != page_va || x.tid != tid);
@@ -174,6 +194,7 @@ pub fn select_page() -> (usize, isize) {
     unsafe {
         let mut glbtb = GLB_SWM.lock();
         let frametb = &mut glbtb.frame_table;
+        let mut pin_cnt = 0;
 
         // kprintln!("{}", frametb.len());
 
@@ -182,12 +203,23 @@ pub fn select_page() -> (usize, isize) {
 
         for i in 0..frametb.len() {
             if frametb[i].busy {
-                continue;
+                continue; // moving page
+            }
+            if frametb[i].ref_cnt > 0 {
+                // kprintln!("found pin");
+                pin_cnt += 1;
+                continue; // pinned page
             }
             if frametb[i].time < min_time {
                 min_time = frametb[i].time;
                 min_index = i;
             }
+        }
+
+        kprintln!("pin count: {}", pin_cnt);
+
+        if min_time == isize::MAX {
+            panic!("no available page to swap out");
         }
 
         if frametb.len() == 0 {

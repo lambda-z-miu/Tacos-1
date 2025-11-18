@@ -39,5 +39,5 @@ pub fn main(cmd: &str) {
         assert_eq!(r, NORMAL_EXIT);
     }
 
-    thread::schedule();
+    // thread::schedule();
 }

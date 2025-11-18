@@ -160,6 +160,7 @@ fn load_segment(
             swapmanager::MemState::InMem,
             leaf_flag,
             None,
+            false,
         );
         swapmanager::register(
             uaddr,
@@ -168,6 +169,7 @@ fn load_segment(
             leaf_flag,
             None,
             Some(buf as usize),
+            0,
         );
         // MNGLOCK.release();
 
@@ -225,6 +227,7 @@ fn init_user_stack(
         swapmanager::MemState::InMem,
         flags,
         None,
+        false,
     );
     swapmanager::register(
         stack_page_begin,
@@ -233,6 +236,7 @@ fn init_user_stack(
         flags,
         None,
         Some(stack_va as usize),
+        0,
     );
     // MNGLOCK.release();
 

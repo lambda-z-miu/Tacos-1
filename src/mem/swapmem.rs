@@ -80,8 +80,9 @@ pub fn swapin(inpage: usize) -> bool {
     {
         let thread = current();
         let mut swap_table = thread.swap_table.lock();
+        let pin_flag = get_pin_flag(&swap_table, inpage);
         clean_ste(&mut swap_table, inpage);
-        register_swaptable(&mut swap_table, inpage, MemState::InMem, flags, None);
+        register_swaptable(&mut swap_table, inpage, MemState::InMem, flags, None, false);
         unsafe {
             if REACHED.load(core::sync::atomic::Ordering::SeqCst) {
                 kprintln!("80");
@@ -95,6 +96,7 @@ pub fn swapin(inpage: usize) -> bool {
             flags,
             Some(pos),
             Some(addr as usize),
+            if pin_flag { 1 } else { 0 },
         );
         unsafe {
             if REACHED.load(core::sync::atomic::Ordering::SeqCst) {
@@ -177,6 +179,7 @@ pub fn swapout_pt(
                 MemState::Swapped,
                 pte_flag,
                 Some(pos),
+                false,
             );
 
             // get GLB -> GET MNG LOCK
@@ -187,6 +190,7 @@ pub fn swapout_pt(
                 pte_flag,
                 Some(pos),
                 None,
+                0,
             );
         }
     } else {
@@ -235,6 +239,7 @@ pub fn swapout_pt(
             MemState::Swapped,
             pte_flag,
             Some(pos),
+            false,
         );
 
         // regist global info
@@ -245,6 +250,7 @@ pub fn swapout_pt(
             pte_flag,
             Some(pos),
             None,
+            0, // a page with ref_cnt cannot be swapped out
         );
         // MNGLOCK.release();
     }

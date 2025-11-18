@@ -45,7 +45,9 @@ STDOUT:
 [[38;2;129;165;113;1m28214 ms[0m] handler called 0x6 0x804ffe20 0x201 0x804ffe24 from 0
 [[38;2;129;165;113;1m28215 ms[0m] handler called 0x6 0x804fffef 0x2 0x0 from 1
 [[38;2;129;165;113;1m28369 ms[0m] PAGE NOT FOUND
-[[38;2;129;165;113;1m28369 ms[0m] addr at 804dff98, base at804fffd0, sp at 804dff90
+[[38;2;1(TIMEOUT) FAILED
+Early stopping...
+804dff98, base at804fffd0, sp at 804dff90
 growing stack to 804dff98
 [[38;2;129;165;113;1m28370 ms[0m] panicked at src/trap/util.rs:129:29:
 msg

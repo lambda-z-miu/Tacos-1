@@ -27,6 +27,14 @@ pub fn check_ptr_writable(va: usize) -> bool {
 
 pub fn check_ptr_valid(va: usize) -> bool {
     let thread = current();
+    {
+        let swaptable = thread.swap_table.lock();
+        for i in swaptable.iter() {
+            if i.addr == va - (va % PG_SIZE) {
+                return true;
+            }
+        }
+    }
     let pt_ref = thread.pagetable.as_ref().unwrap().lock();
     let ptentry = pt_ref.get_pte(va);
     if ptentry.is_none() || !ptentry.unwrap().is_valid() {
@@ -148,7 +156,7 @@ pub fn alloc_from_pool(addr: usize) {
 
     let thread = current();
     let mut swap_table = thread.swap_table.lock();
-    swapmanager::register_swaptable(&mut swap_table, addr, MemState::InMem, flag, None);
+    swapmanager::register_swaptable(&mut swap_table, addr, MemState::InMem, flag, None, false);
     swapmanager::register(
         addr,
         current().id(),
@@ -156,5 +164,6 @@ pub fn alloc_from_pool(addr: usize) {
         flag,
         None,
         Some(va_alloc as usize),
+        0, // TODO: ref_cnt is really 0?
     );
 }

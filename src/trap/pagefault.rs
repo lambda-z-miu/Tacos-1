@@ -12,6 +12,7 @@ use crate::mem::userbuf::{
 use crate::mem::PG_MASK;
 use crate::mem::{swapmanager, swapmem, Entry, PTEFlags, PageTable, PhysAddr, PG_SIZE, VM_OFFSET};
 use crate::sync::Lock;
+use crate::thread::block;
 use crate::thread::schedule;
 use crate::thread::{self, current};
 use crate::trap::{flags, fscall, syscall, util, Frame};
@@ -73,7 +74,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             if (!need_wait) {
                 break;
             } else {
-                schedule();
+                block();
             }
         }
 

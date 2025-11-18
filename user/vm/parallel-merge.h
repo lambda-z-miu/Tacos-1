@@ -54,12 +54,16 @@ static void sort_chunks(const char* subprocess, int exit_status) {
         int fd;
 
         assert(wait(children[i]) == exit_status, "wait for child %d", i);
+        printf("%d",i);
 
         /* Read chunk back from file. */
         strcpy(fn, "buf");
         itoa(fn + strlen(fn), i);
         assert((fd = open(fn, 0)) > 2);
         read(fd, buf1 + CHUNK_SIZE * i, CHUNK_SIZE);
+        for(uint8* ptr = buf1 + CHUNK_SIZE * i;ptr < buf1 + CHUNK_SIZE * (i + 1) -1 ;ptr++){
+            assert((*ptr)<*(ptr + 1),"unsorted %d at %d",i,ptr - (buf1 + CHUNK_SIZE * i));
+        }
         close(fd);
     }
 }

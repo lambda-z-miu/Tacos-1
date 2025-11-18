@@ -1,3 +1,5 @@
+use crate::mem::swapmanager::{MemState, GLB_SWM};
+use crate::mem::PG_SIZE;
 use crate::sync::Lock;
 use crate::trap::flags::FdFlags;
 use crate::trap::util::*;
@@ -48,6 +50,7 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
     }
     check_slice_valid(buf, len)?;
     check_slice_writable(buf, len)?;
+    pin_pages(buf as usize, len);
 
     let thread = current();
     let mut fd_map = thread.fd.lock();
@@ -56,6 +59,16 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
     unsafe {
         // kprintln!("READ HAPPENED");
         let size = file.0.read(from_raw_parts_mut(buf, len))?;
+        let mut prtlen = size;
+        if prtlen > 1024 {
+            prtlen = 1024;
+        }
+        for i in 0..prtlen {
+            // kprint!("{} ", *(buf.wrapping_add(i)));
+        }
+        // kprintln!("");
+        crate::thread::sleep(100);
+        unpin_pages(buf as usize, len);
         return Ok(size as isize);
     }
 }
@@ -76,21 +89,31 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> Result<isize, OsErr
         return Err(OsError::PermissionDenied); // cannot write in stdin
     }
     if len == 0 {
-        return Ok(0); //zero reading is permited
+        return Ok(0); //zero writing is permited
     }
-    /*
-        for i in 0..len {
-            unsafe {
-                kprintln!("WRITING {}", *(buf.wrapping_add(i)));
-            }
+
+    pin_pages(buf as usize, len);
+
+    let mut prtlen = len;
+    if len > 1024 {
+        prtlen = 1024;
+    }
+
+    for i in 0..prtlen {
+        unsafe {
+            // kprint!("{} ", *(buf.wrapping_add(i)));
         }
-    */
+    }
+    // kprintln!("");
+
     let thread = current();
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?; // file not exist
     file.1.write_permision()?; // permision denied
     unsafe {
         let size = file.0.write(from_raw_parts(buf, len))?;
+        crate::thread::sleep(100);
+        unpin_pages(buf as usize, len);
         return Ok(size as isize);
     }
 }
@@ -139,14 +162,13 @@ pub fn open_handler(path: usize, flag: usize) -> Result<isize, OsError> {
     if path == "".to_string() {
         return Err(OsError::BadPtr);
     }
-
     let path_sys: disk::Path = disk::Path::from(&path as &str);
     if disk::Path::exists(disk::Path::from(&path as &str)) {
         //file exists
         let file_opened = disk::DISKFS.open(path_sys)?;
         // opened file
-        let new_fd = current().get_fresh_fd();
         let thread = current();
+        let new_fd = thread.get_fresh_fd();
         let mut fd_map = thread.fd.lock();
         fd_map.insert(new_fd, (file_opened, fdflag));
         return Ok(new_fd as isize);
@@ -178,9 +200,11 @@ pub fn close_handler(fd: u32) -> Result<isize, OsError> {
         }
     }
     let mut fd_map = thread.fd.lock();
-    let file = fd_map.get(&fd).ok_or(OsError::FileNotExist)?;
-    disk::DISKFS.close(file.0.clone());
-    fd_map.remove(&fd);
+    let file_tuple = fd_map.remove(&fd).ok_or(OsError::FileNotExist)?;
+    let mut file = file_tuple.0;
+    file.flush()?;
+    disk::DISKFS.close(file.clone());
+    // fd_map.remove(&fd);
     return Ok(0);
 }
 
@@ -213,4 +237,75 @@ pub fn remove_handler(path: usize) -> Result<isize, OsError> {
     let path_sys: disk::Path = disk::Path::from(&path as &str);
     DISKFS.remove(path_sys)?;
     return Ok(0);
+}
+
+pub fn pin_pages(buf: usize, len: usize) {
+    {
+        let mut base = buf - (buf % PG_SIZE);
+        let thread = current();
+        let mut swap_table = thread.swap_table.lock();
+        let mut glb_mng = unsafe { GLB_SWM.lock() };
+
+        let mut found = false;
+        while (base < buf + len) {
+            found = false;
+            for i in swap_table.iter_mut() {
+                if i.addr == base {
+                    // kprintln!("ENTERED1");
+                    if i.state == MemState::Swapped {
+                        i.need_pin = true;
+                    } else if i.state == MemState::InMem {
+                        let mut frame_fnd = false;
+                        for j in glb_mng.frame_table.iter_mut() {
+                            if j.stored_va == base && j.tid == thread.id() {
+                                j.ref_cnt += 1;
+                                // kprintln!("ENTERED2");
+                                frame_fnd = true;
+                                break;
+                            }
+                        }
+                        if !frame_fnd {
+                            panic!("pin page not in mem");
+                        }
+                    }
+                    found = true;
+                    break;
+                }
+            }
+            base += PG_SIZE;
+            if !found {
+                panic!("pin page not in swap table");
+            }
+        }
+    }
+
+    let mut ptr = buf;
+    while (ptr < buf + len) {
+        unsafe {
+            let a = *(ptr as *mut u8); // causing a page fault if the page is not in memory
+        }
+        ptr += 1;
+    }
+}
+
+pub fn unpin_pages(buf: usize, len: usize) {
+    let mut base = buf - (buf % PG_SIZE);
+    let thread = current();
+    let mut glb_mng = unsafe { GLB_SWM.lock() };
+
+    while (base < buf + len) {
+        let mut found = false;
+        for i in glb_mng.frame_table.iter_mut() {
+            if i.stored_va == base && i.tid == thread.id() {
+                assert!(i.ref_cnt > 0);
+                i.ref_cnt -= 1;
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            panic!("pinned page not in mem");
+        }
+        base += PG_SIZE;
+    }
 }
