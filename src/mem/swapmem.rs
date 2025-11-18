@@ -29,10 +29,6 @@ pub fn swapin(inpage: usize) -> bool {
         if addr.is_none() {
             return false;
         }
-
-        if REACHED.load(core::sync::atomic::Ordering::SeqCst) {
-            kprintln!("30");
-        }
     }
 
     let addr = addr.unwrap();
@@ -72,9 +68,6 @@ pub fn swapin(inpage: usize) -> bool {
             {
                 panic!("error when reading swap file");
             }
-            if REACHED.load(core::sync::atomic::Ordering::SeqCst) {
-                kprintln!("70");
-            }
         }
     }
     {
@@ -82,11 +75,6 @@ pub fn swapin(inpage: usize) -> bool {
         let mut swap_table = thread.swap_table.lock();
         clean_ste(&mut swap_table, inpage);
         register_swaptable(&mut swap_table, inpage, MemState::InMem, flags, None);
-        unsafe {
-            if REACHED.load(core::sync::atomic::Ordering::SeqCst) {
-                kprintln!("80");
-            }
-        }
         // GET GLB LOCK
         register(
             inpage,
@@ -96,11 +84,6 @@ pub fn swapin(inpage: usize) -> bool {
             Some(pos),
             Some(addr as usize),
         );
-        unsafe {
-            if REACHED.load(core::sync::atomic::Ordering::SeqCst) {
-                kprintln!("90");
-            }
-        }
     }
     return true;
 }
@@ -191,11 +174,12 @@ pub fn swapout_pt(
         }
     } else {
         if pt.is_none() {
+            /*
             kprintln!(
                 "SWAPOUT_PT: thread {} does not exist, current in {}",
                 outpage.1,
                 current().id()
-            );
+            );*/
             return;
             panic!("cannot get page table");
         }

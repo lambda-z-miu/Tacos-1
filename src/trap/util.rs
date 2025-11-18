@@ -32,12 +32,13 @@ pub fn check_ptr_valid(va: usize) -> bool {
     if ptentry.is_none() || !ptentry.unwrap().is_valid() {
         unsafe {
             if (current().stack_base.unwrap_or(0) - va <= MAX_STACK && va >= SP) {
+                /*
                 kprintln!(
                     "ptr check: va at {:x}, sp at {:x}, stack base at {:x}",
                     va,
                     SP,
                     current().stack_base.unwrap_or(0)
-                );
+                );*/
                 return true;
             }
             return false;
@@ -82,7 +83,7 @@ pub fn check_slice_valid(ptr: *const u8, len: usize) -> Result<(), OsError> {
 pub fn check_slice_writable(ptr: *const u8, len: usize) -> Result<(), OsError> {
     for i in 0..len {
         if !check_ptr_writable(ptr.wrapping_add(i) as usize) {
-            kprintln!("SLICE CHECK FAILED");
+            // kprintln!("SLICE CHECK FAILED");
             return Err(OsError::InvalidFileMode);
         }
     }

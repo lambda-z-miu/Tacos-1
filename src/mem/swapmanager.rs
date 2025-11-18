@@ -191,7 +191,7 @@ pub fn select_page() -> (usize, isize) {
         }
 
         if frametb.len() == 0 {
-            kprintln!("called");
+            // kprintln!("called");
             return (1, 0);
         }
 

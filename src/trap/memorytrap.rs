@@ -113,11 +113,11 @@ fn check_overlap(fd1: u32, fd2: u32) -> bool {
 }
 
 fn check_page_overlap(va: usize) -> bool {
-    kprintln!("called check page overlap at 0x{:x}", va);
+    // kprintln!("called check page overlap at 0x{:x}", va);
     let thread = current();
     let page_info = thread.page_info.lock();
     for i in page_info.iter() {
-        kprintln!("existing page at 0x{:x}", i.va);
+        // kprintln!("existing page at 0x{:x}", i.va);
         if (i.va == va) {
             return true;
         }
@@ -147,7 +147,7 @@ pub fn unmap_handler(mmap_id: u32) -> Result<isize, OsError> {
             }
 
             if dirty {
-                kprintln!("WB CALLED");
+                // kprintln!("WB CALLED");
                 let pos_mem = fscall::tell_handler(item.fd)?;
                 fscall::write_handler(item.fd, item.addr as *const u8, item.len as usize);
                 if pos_mem >= 0 {

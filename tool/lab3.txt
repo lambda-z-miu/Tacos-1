@@ -1,0 +1,76 @@
+Running pt-grow-bad ... PASSED
+Running mmap-read ... PASSED
+Running pt-write-code ... PASSED
+Running pt-write-code2 ... PASSED
+Running mmap-over-stk ... PASSED
+Running pt-bad-addr ... PASSED
+Running mmap-zero ... PASSED
+Running mmap-inherit ... PASSED
+Running mmap-bad-fd ... PASSED
+Running mmap-close ... PASSED
+Running mmap-clean ... PASSED
+Running page-merge-stk ... FAILED
+STDOUT:
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m19 ms[0m] Hello, World!
+[[38;2;129;165;113;1m36 ms[0m] Executing command page-merge-stk
+growing stack to 804dff98
+[[38;2;129;165;113;1m13119 ms[0m] panicked at src/trap/util.rs:130:29:
+msg
+Running mmap-misalign ... PASSED
+Running page-linear ... PASSED
+Running mmap-null ... PASSED
+Running mmap-remove ... PASSED
+Running page-merge-seq ... FAILED
+STDOUT:
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m21 ms[0m] Hello, World!
+[[38;2;129;165;113;1m35 ms[0m] Executing command page-merge-seq
+panicked at 'bad value 1 in byte 3241', user/vm/page-merge-seq.c:91
+[[38;2;129;165;113;1m20646 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running page-parallel ... PASSED
+Running mmap-over-data ... PASSED
+Running pt-bad-read ... PASSED
+Running pt-big-stk-obj ... PASSED
+Running mmap-write ... PASSED
+Running page-merge-mm ... FAILED
+STDOUT:
+Boot HART PMP Address Bits: 54
+Boot HART MHPM Info       : 0 (0x00000000)
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m19 ms[0m] Hello, World!
+[[38;2;129;165;113;1m33 ms[0m] Executing command page-merge-mm
+panicked at 'assertion failed: `mmap(fd, p) != MAP_FAILED`', user/vm/child-qsort-mm.c:12
+[[38;2;129;165;113;1m14917 ms[0m] panicked at src/trap/util.rs:130:29:
+msg
+Running mmap-shuffle ... PASSED
+Running mmap-unmap ... PASSED
+Running pt-grow-stk-sc ... PASSED
+Running mmap-twice ... PASSED
+Running page-merge-par ... FAILED
+STDOUT:
+Boot HART Debug Triggers  : 0 triggers
+Boot HART MIDELEG         : 0x0000000000001666
+Boot HART MEDELEG         : 0x0000000000f0b509
+[[38;2;129;165;113;1m19 ms[0m] Hello, World!
+[[38;2;129;165;113;1m33 ms[0m] Executing command page-merge-par
+panicked at 'bad value 1 in byte 3076', user/vm/parallel-merge.h:103
+[[38;2;129;165;113;1m31448 ms[0m] panicked at src/../test/user.rs:39:9:
+assertion `left == right` failed
+  left: 12345
+ right: 0
+Running mmap-overlap ... PASSED
+Running mmap-over-code ... PASSED
+Running pt-grow-stack ... PASSED
+GRADE: 82/100

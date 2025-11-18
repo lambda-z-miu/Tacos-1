@@ -160,7 +160,7 @@ pub fn exit(value: isize) -> ! {
         panic!("cannot exit with no user process");
     } else {
         unsafe {
-            kprintln!("put ret value {}", value);
+            // kprintln!("put ret value {}", value);
             thread.userproc.as_ref().unwrap().bin.allow_write();
 
             thread.mmap_info.lock().clear(); // release all mmap resources

@@ -127,7 +127,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                 }
             }*/
         }
-        kprintln!("PAGE NOT FOUND");
+        // kprintln!("PAGE NOT FOUND");
         // EXITLOCK.release();
         let mut current_sp = frame.x[2];
         if current_sp > VM_OFFSET {
@@ -144,12 +144,13 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         kprintln!("{}", current().stack_base.unwrap_or(0) - addr);*/
 
         // growing stack
+        /*
         kprintln!(
             "addr at {:x}, base at{:x}, sp at {:x}",
             addr,
             current().stack_base.unwrap_or(0),
             current_sp
-        );
+        );*/
         let base = current().stack_base.unwrap_or(0);
         if (addr > current_sp && base < addr + MAX_STACK && addr < base) {
             // panic!("log");
@@ -159,7 +160,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         }
 
         // lazy allocating mmap region
-        kprintln!("0x{:x} needed", addr);
+        // kprintln!("0x{:x} needed", addr);
         for i in current().mmap_info.lock().iter() {
             if i.in_map(addr) {
                 // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
