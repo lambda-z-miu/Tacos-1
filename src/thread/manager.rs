@@ -1,5 +1,6 @@
 //! Manager of all kernel threads
 
+use alloc::collections::btree_map::BTreeMap;
 use alloc::collections::vec_deque::VecDeque;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -49,7 +50,7 @@ impl Manager {
                 None,
                 None,
                 Vec::new(),
-                VecDeque::new(),
+                BTreeMap::new(),
                 -1,
             ));
             unsafe { (bootstack as *mut usize).write(MAGIC) };

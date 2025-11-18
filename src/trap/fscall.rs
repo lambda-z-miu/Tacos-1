@@ -63,11 +63,11 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
         if prtlen > 1024 {
             prtlen = 1024;
         }
-        for i in 0..prtlen {
-            // kprint!("{} ", *(buf.wrapping_add(i)));
-        }
+        //for i in 0..prtlen {
+        // kprint!("{} ", *(buf.wrapping_add(i)));
+        //}
         // kprintln!("");
-        crate::thread::sleep(100);
+        // crate::thread::sleep(100);
         unpin_pages(buf as usize, len);
         return Ok(size as isize);
     }
@@ -249,9 +249,9 @@ pub fn pin_pages(buf: usize, len: usize) {
         let mut found = false;
         while (base < buf + len) {
             found = false;
-            for i in swap_table.iter_mut() {
-                if i.addr == base {
-                    // kprintln!("ENTERED1");
+            let mut item = swap_table.get_mut(&base);
+            match item {
+                Some(i) => {
                     if i.state == MemState::Swapped {
                         i.need_pin = true;
                     } else if i.state == MemState::InMem {
@@ -269,22 +269,21 @@ pub fn pin_pages(buf: usize, len: usize) {
                         }
                     }
                     found = true;
-                    break;
+                }
+                None => {
+                    panic!("pin page not in swap table");
                 }
             }
             base += PG_SIZE;
-            if !found {
-                panic!("pin page not in swap table");
-            }
         }
-    }
 
-    let mut ptr = buf;
-    while (ptr < buf + len) {
-        unsafe {
-            let a = *(ptr as *mut u8); // causing a page fault if the page is not in memory
+        let mut ptr = buf;
+        while (ptr < buf + len) {
+            unsafe {
+                let a = *(ptr as *mut u8); // causing a page fault if the page is not in memory
+            }
+            ptr += 1;
         }
-        ptr += 1;
     }
 }
 

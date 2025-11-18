@@ -3,6 +3,7 @@ use crate::sbi::console::Stdout;
 use crate::sbi::interrupt;
 use crate::sync::Lock;
 
+use alloc::collections::btree_map::BTreeMap;
 use alloc::slice;
 
 use crate::fs::disk::Swap;
@@ -110,7 +111,7 @@ pub fn swapin(inpage: usize) -> bool {
 pub fn swapout_pt(
     outpage: (usize, isize),
     pt: Option<&mut PageTable>,
-    swaptable: Option<&mut VecDeque<SwapTableEntry>>,
+    swaptable: Option<&mut BTreeMap<usize, SwapTableEntry>>,
 ) {
     // assert!(outpage.0 % PG_SIZE == 0);
     if outpage.0 == 1 {

@@ -28,11 +28,10 @@ pub fn check_ptr_writable(va: usize) -> bool {
 pub fn check_ptr_valid(va: usize) -> bool {
     let thread = current();
     {
+        let base = va - (va % PG_SIZE);
         let swaptable = thread.swap_table.lock();
-        for i in swaptable.iter() {
-            if i.addr == va - (va % PG_SIZE) {
-                return true;
-            }
+        if swaptable.get(&base).is_some() {
+            return true;
         }
     }
     let pt_ref = thread.pagetable.as_ref().unwrap().lock();

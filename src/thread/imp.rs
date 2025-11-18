@@ -54,7 +54,7 @@ pub struct Thread {
     pub stack_base: Option<usize>,
     pub page_info: Mutex<Vec<PageInfo>>,
     pub mmap_info: Mutex<Vec<MmapData>>,
-    pub swap_table: Mutex<VecDeque<SwapTableEntry>>,
+    pub swap_table: Mutex<BTreeMap<usize, SwapTableEntry>>,
 }
 
 impl Thread {
@@ -67,18 +67,17 @@ impl Thread {
         pagetable: Option<PageTable>,
         stack_base: Option<usize>,
         page_info: Vec<PageInfo>,
-        swap_table: VecDeque<SwapTableEntry>,
+        swap_table: BTreeMap<usize, SwapTableEntry>,
         thread_id: isize,
     ) -> Self {
         /// The next thread's id
-        for i in swap_table.iter() {
-            /*kprintln!(
-                "page at {:x} in swap table, fo {:x}",
-                i.addr,
-                i.file_off.unwrap_or(0xbeef)
-            );*/
-        }
-
+        // for i in swap_table.iter() {
+        /*kprintln!(
+            "page at {:x} in swap table, fo {:x}",
+            i.addr,
+            i.file_off.unwrap_or(0xbeef)
+        );*/
+        // }
         Thread {
             tid: thread_id,
             name,
@@ -179,7 +178,7 @@ pub struct Builder {
     pagetable: Option<PageTable>,
     stack_end: Option<usize>,
     page_info: Vec<PageInfo>,
-    swap_table: VecDeque<SwapTableEntry>,
+    swap_table: BTreeMap<usize, SwapTableEntry>,
     thread_id: isize,
 }
 
@@ -199,7 +198,7 @@ impl Builder {
             pagetable: None,
             stack_end: None,
             page_info: Vec::new(),
-            swap_table: VecDeque::new(),
+            swap_table: BTreeMap::new(),
             thread_id: 0xbeef, // dummy
         }
     }
@@ -214,7 +213,7 @@ impl Builder {
         self
     }
 
-    pub fn swaptable(mut self, swaptable: VecDeque<SwapTableEntry>) -> Self {
+    pub fn swaptable(mut self, swaptable: BTreeMap<usize, SwapTableEntry>) -> Self {
         self.swap_table = swaptable;
         self
     }

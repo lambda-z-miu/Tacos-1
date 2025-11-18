@@ -4,6 +4,7 @@ use crate::mem::swapmanager::SwapTableEntry;
 use crate::mem::{swapmanager, swapmem};
 use crate::sync::Lock;
 use crate::trap::flags;
+use alloc::collections::btree_map::BTreeMap;
 use alloc::collections::VecDeque;
 use alloc::vec;
 use elf_rs::{Elf, ElfFile, ProgramHeaderEntry, ProgramHeaderFlags, ProgramType};
@@ -37,7 +38,7 @@ pub(super) fn load_executable(
     file: &mut File,
     pagetable: &mut PageTable,
     nexttid: isize,
-    swaptable: &mut VecDeque<SwapTableEntry>,
+    swaptable: &mut BTreeMap<usize, SwapTableEntry>,
 ) -> Result<ExecInfo> {
     let exec_info = load_elf(file, pagetable, nexttid, swaptable)?;
 
@@ -55,7 +56,7 @@ fn load_elf(
     file: &mut File,
     pagetable: &mut PageTable,
     tid: isize,
-    swaptable: &mut VecDeque<SwapTableEntry>,
+    swaptable: &mut BTreeMap<usize, SwapTableEntry>,
 ) -> Result<ExecInfo> {
     // Ensure cursor is at the beginning
     file.rewind()?;
@@ -86,7 +87,7 @@ fn load_segment(
     phdr: &ProgramHeaderEntry,
     pagetable: &mut PageTable,
     nexttid: isize,
-    swaptable: &mut VecDeque<SwapTableEntry>,
+    swaptable: &mut BTreeMap<usize, SwapTableEntry>,
 ) {
     assert_eq!(phdr.ph_type(), ProgramType::LOAD);
 
@@ -173,7 +174,7 @@ fn load_segment(
         );
         // MNGLOCK.release();
 
-        let kva = pagetable.get_pte(uaddr).unwrap().pa().into_va();
+        // let kva = pagetable.get_pte(uaddr).unwrap().pa().into_va();
 
         // kprintln!("Registered uaddr {:x}", uaddr);
 
@@ -196,7 +197,7 @@ fn init_user_stack(
     pagetable: &mut PageTable,
     init_sp: usize,
     nexttid: isize,
-    swaptable: &mut VecDeque<SwapTableEntry>,
+    swaptable: &mut BTreeMap<usize, SwapTableEntry>,
 ) {
     assert!(init_sp % PG_SIZE == 0, "initial sp address misaligns");
 

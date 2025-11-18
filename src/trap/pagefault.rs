@@ -25,6 +25,7 @@ const MAX_STACK: usize = 0x800000;
 
 pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     let privilege = frame.sstatus.spp();
+    let thread = current();
 
     let mut table = unsafe { PageTable::effective_pagetable() };
     let present = {
@@ -33,19 +34,20 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
             None => false,
         }
     };
-    unsafe { /*
-         kprintln!(
-             "REPORT : Page fault at {:#x}:  error {} page , {} error, from thread {}",
-             addr,
-             match fault {
-                 StorePageFault => "writing",
-                 LoadPageFault => "reading",
-                 InstructionPageFault => "fetching instruction",
-                 _ => panic!("Unknown Page Fault"),
-             },
-             if present { "right" } else { "not present" },
-             current().id()
-         );*/
+
+    unsafe {
+        kprintln!(
+            "REPORT : Page fault at {:#x}:  error {} page , {} error, from thread {}",
+            addr,
+            match fault {
+                StorePageFault => "writing",
+                LoadPageFault => "reading",
+                InstructionPageFault => "fetching instruction",
+                _ => panic!("Unknown Page Fault"),
+            },
+            if present { "right" } else { "not present" },
+            thread.id()
+        );
     }
     unsafe { sstatus::set_sie() };
 
@@ -54,29 +56,33 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         let mut found_page = false;
         let mut need_wait = false;
         let addr_base = addr - (addr % PG_SIZE);
+
         loop {
-            let thread = current();
             {
-                let swap_table = thread.swap_table.lock();
-                for i in swap_table.iter() {
-                    if i.addr == addr_base {
-                        // kprintln!("called loop");
-                        found_page = true; // found the page in swap table
-                        if i.state == swapmanager::MemState::InMem {
-                            need_wait = true; // if it is in air, then wait
-                        } else {
+                let swaptable = thread.swap_table.lock();
+                kprintln!("REACHED3");
+                let item = swaptable.get(&addr_base);
+                match item {
+                    Some(i) => {
+                        if i.state == swapmanager::MemState::Swapped {
+                            found_page = true; // found the page in swap table
                             need_wait = false;
+                        } else {
+                            found_page = true;
+                            need_wait = true; // if it is in air, then wait
                         }
-                        break;
                     }
+                    None => {}
                 }
             }
             if (!need_wait) {
                 break;
             } else {
+                kprintln!("PAGE IN AIR, WAITING");
                 block();
             }
         }
+        kprintln!("REACHED");
 
         if found_page {
             loop {
@@ -148,10 +154,10 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         kprintln!(
             "addr at {:x}, base at{:x}, sp at {:x}",
             addr,
-            current().stack_base.unwrap_or(0),
+            thread.stack_base.unwrap_or(0),
             current_sp
         );
-        let base = current().stack_base.unwrap_or(0);
+        let base = thread.stack_base.unwrap_or(0);
         if (addr > current_sp && base < addr + MAX_STACK && addr < base) {
             // panic!("log");
             kprint!("growing stack to {:x}\n", addr);
@@ -161,7 +167,7 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
 
         // lazy allocating mmap region
         kprintln!("0x{:x} needed", addr);
-        for i in current().mmap_info.lock().iter() {
+        for i in thread.mmap_info.lock().iter() {
             if i.in_map(addr) {
                 // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
                 for j in 0..i.pages {
@@ -175,7 +181,6 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
                     fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
                     fscall::seek_handler(i.fd, pos_mem as u32);
 
-                    let thread = current();
                     let pt = thread.pagetable.as_ref().unwrap();
                     pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();
                     // to track if it is modified later

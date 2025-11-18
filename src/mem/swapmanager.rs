@@ -23,7 +23,7 @@ pub enum MemState {
 }
 #[derive(Clone)]
 pub struct SwapTableEntry {
-    pub addr: usize,
+    // pub addr: usize,
     pub state: MemState,
     pub flags: PTEFlags,
     pub file_off: Option<u32>,
@@ -67,46 +67,40 @@ pub fn get_slot() -> u32 {
     panic!("unreachable");
 }
 
-pub fn get_pin_flag(swap_table: &VecDeque<SwapTableEntry>, page: usize) -> bool {
-    let mut item = None;
-    for i in swap_table.iter() {
-        if i.addr == page {
-            item = Some(i.clone());
-            break;
-        }
-    }
+pub fn get_pin_flag(swap_table: &BTreeMap<usize, SwapTableEntry>, page: usize) -> bool {
+    let mut item = swap_table.get(&page);
     match item {
-        Some(mut entry) => entry.need_pin,
+        Some(entry) => entry.need_pin,
         None => false,
     }
 }
 
-pub fn clean_ste(swap_table: &mut VecDeque<SwapTableEntry>, page: usize) {
-    swap_table.retain(|x| x.addr != page);
+pub fn clean_ste(swap_table: &mut BTreeMap<usize, SwapTableEntry>, page: usize) {
+    swap_table.remove(&page);
 }
 
 // DEFAULT SWAP
 pub fn register_swaptable(
-    swap_table: &mut VecDeque<SwapTableEntry>,
+    swap_table: &mut BTreeMap<usize, SwapTableEntry>,
     va: usize,
     state: MemState,
     flags: PTEFlags,
     file_off: Option<u32>,
     need_pin: bool,
 ) {
-    for i in swap_table.iter() {
-        if i.addr == va {
-            panic!("conflic item");
-        }
+    if swap_table.contains_key(&va) {
+        panic!("conflic item");
     }
 
-    swap_table.push_back(SwapTableEntry {
-        addr: va,
-        state,
-        flags,
-        file_off: file_off,
-        need_pin: need_pin,
-    });
+    swap_table.insert(
+        va,
+        SwapTableEntry {
+            state,
+            flags,
+            file_off: file_off,
+            need_pin: need_pin,
+        },
+    );
 }
 
 pub fn register(
@@ -161,34 +155,31 @@ pub fn register(
 pub fn get_page_pos(page: usize) -> Option<u32> {
     let thread = current();
     let mut swap_table = thread.swap_table.lock();
-    for i in 0..swap_table.len() {
-        if swap_table[i].addr == page {
-            return swap_table[i].file_off;
-        }
+    let item = swap_table.get(&page);
+    match item {
+        Some(entry) => entry.file_off,
+        None => None,
     }
-    return None;
 }
 
 pub fn get_page_flags(page: usize) -> PTEFlags {
     let thread = current();
     let mut swap_table = thread.swap_table.lock();
-    for i in swap_table.iter() {
-        if i.addr == page {
-            return i.flags;
-        }
+    let item = swap_table.get(&page);
+    match item {
+        Some(entry) => entry.flags,
+        None => panic!("Trying to swap in a file that is not in swap file"),
     }
-    panic!("Trying to swap in a file that is not in swap file");
 }
 
 pub fn get_page_state(page: usize) -> MemState {
     let thread = current();
     let mut swap_table = thread.swap_table.lock();
-    for i in swap_table.iter() {
-        if i.addr == page {
-            return i.state;
-        }
+    let item = swap_table.get(&page);
+    match item {
+        Some(entry) => entry.state,
+        None => panic!("Trying to swap in a file that is not in swap file"),
     }
-    panic!("NOT FOUND");
 }
 
 pub fn select_page() -> (usize, isize) {

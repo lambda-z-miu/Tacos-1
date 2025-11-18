@@ -4,6 +4,7 @@
 mod load;
 
 use alloc::borrow::ToOwned;
+use alloc::collections::btree_map::BTreeMap;
 use alloc::collections::btree_map::Entry;
 use alloc::collections::vec_deque::VecDeque;
 use alloc::string::String;
@@ -52,7 +53,7 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
     let mut pt = KernelPgTable::clone();
     let nextid = crate::thread::imp::TID.fetch_add(1, SeqCst);
 
-    let mut swap_table_usr = VecDeque::new();
+    let mut swap_table_usr = BTreeMap::new();
     let exec_info = match load::load_executable(&mut file, &mut pt, nextid, &mut swap_table_usr) {
         Ok(x) => x,
         Err(_) => unsafe {
