@@ -32,7 +32,7 @@ const SYS_UNMAP: usize = 14;
 
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
-
+    /*
     kprintln!(
         "handler called 0x{:x} 0x{:x} 0x{:x} 0x{:x} from {}",
         _id,
@@ -40,7 +40,7 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
         args[1],
         args[2],
         current().id()
-    );
+    ); */
     let id = match _id {
         SYS_HALT => sbi::shutdown(),
 

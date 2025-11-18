@@ -118,6 +118,7 @@ pub fn register(
     page_frame: Option<usize>,
     ref_cnt: usize,
 ) {
+    /*
     kprintln!(
         "reg page {:x} state {} file offset {:x} in thread {},pgframe {:x}",
         page_va,
@@ -129,7 +130,7 @@ pub fn register(
         file_off.unwrap_or(0xbeef),
         tid,
         page_frame.unwrap_or(0xbeef)
-    );
+    );*/
     unsafe {
         let mut glb_table = GLB_SWM.lock();
 
@@ -216,7 +217,7 @@ pub fn select_page() -> (usize, isize) {
             }
         }
 
-        kprintln!("pin count: {}", pin_cnt);
+        // kprintln!("pin count: {}", pin_cnt);
 
         if min_time == isize::MAX {
             panic!("no available page to swap out");
