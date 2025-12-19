@@ -23,4 +23,6 @@ pub enum OsError {
     PermissionDenied = -16,
     OverlappingMMap = -17,
     MMapIDNotExist = -18,
+    NotADirectory = -19,
+    FileExists = -20,
 }

@@ -9,7 +9,6 @@ use super::{bytes_to_sectors, Inum, DISKFS};
 use crate::device::virtio::{Virtio, SECTOR_SIZE};
 use crate::fs::Vnode;
 use crate::mem::{Translate, PG_MASK, PG_SIZE};
-use crate::sbi::interrupt::set;
 use crate::sync::Mutex;
 use crate::{OsError, Result};
 

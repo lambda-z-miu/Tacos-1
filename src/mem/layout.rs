@@ -31,3 +31,4 @@ pub const KERN_BASE: usize = 0x0000000080200000;
 pub const VM_OFFSET: usize = VM_BASE - PM_BASE;
 pub const PLIC_BASE: usize = 0xC000000 + VM_OFFSET;
 pub const MMIO_BASE: usize = 0x10001000 + VM_OFFSET;
+pub const HEAP_BASE: usize = 0x20000000;

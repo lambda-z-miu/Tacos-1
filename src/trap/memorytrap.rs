@@ -1,4 +1,4 @@
-use crate::mem::{allocdata::*, swapmanager};
+use crate::mem::{allocdata::*, swapmanager, HEAP_BASE};
 use alloc::alloc::dealloc;
 
 use crate::{
@@ -102,6 +102,45 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
 
     current().add_mmap(mmapitem);
     return Ok(mmap_id as isize);
+}
+
+pub fn brk_handler(bytes_needed: usize) -> Result<isize, OsError> {
+    if bytes_needed == 0 {
+        return Ok(current().heap_size.load(Ordering::SeqCst) as isize);
+    }
+    let page_needed = (bytes_needed + PG_SIZE - 1) / PG_SIZE;
+    let addr = HEAP_BASE + current().heap_size.load(Ordering::SeqCst) as usize;
+    for i in 0..page_needed {
+        let addr = addr + i * PG_SIZE;
+        if check_page_overlap(addr as usize) {
+            return Err(OsError::OverlappingMMap);
+        }
+    }
+    let mmap_id = MMAP_CNT.fetch_add(1, Ordering::SeqCst);
+    let mmapitem = MmapData {
+        mmap_id: mmap_id,
+        addr: addr,
+        pages: page_needed as usize,
+        fd: 0xFFFF,
+        len: (page_needed as usize * PG_SIZE) as u64,
+        need_close: false,
+    };
+
+    let thread = current();
+    let mut pageinfo = thread.page_info.lock();
+    for i in 0..page_needed {
+        pageinfo.push(PageInfo {
+            va: addr as usize + PG_SIZE * i,
+            page_type: AllocType::Heap,
+        });
+    }
+
+    current().add_mmap(mmapitem);
+    let old_brk = current()
+        .heap_size
+        .fetch_add((page_needed * PG_SIZE) as u32, Ordering::SeqCst);
+    let newbrk = old_brk + (page_needed * PG_SIZE) as u32;
+    return Ok(newbrk as isize);
 }
 
 fn check_overlap(fd1: u32, fd2: u32) -> bool {

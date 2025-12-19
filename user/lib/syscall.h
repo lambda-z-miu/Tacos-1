@@ -18,3 +18,5 @@
 /* Project 4 only. */
 #define SYS_CHDIR 15 /**< Change the current directory. */
 #define SYS_MKDIR 16 /**< Create a directory. */
+
+#define SYS_BRK 17

@@ -30,3 +30,4 @@ entry("mmap");
 entry("munmap");
 entry("chdir");
 entry("mkdir");
+entry("brk");

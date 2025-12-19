@@ -3,6 +3,7 @@ pub enum AllocType {
     MemMap,
     Stack,
     Init,
+    Heap,
 }
 
 #[derive(Clone)]

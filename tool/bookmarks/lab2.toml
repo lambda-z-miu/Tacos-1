@@ -44,3 +44,5 @@ bad-load2 = ["", 2]
 bad-store2 = ["", 2]
 bad-jump2 = ["", 2]
 sc-bad-args = ["", 5]
+
+mytest = ["", 0]

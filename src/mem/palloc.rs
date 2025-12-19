@@ -2,7 +2,7 @@
 
 use core::cmp::min;
 
-use crate::mem::{swapmanager, swapmem, utils::*};
+use crate::mem::utils::*;
 use crate::sync::{Intr, Lazy, Mutex};
 
 // BuddyAllocator allocates at most `1<<MAX_ORDER` pages at a time

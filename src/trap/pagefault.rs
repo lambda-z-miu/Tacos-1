@@ -51,8 +51,8 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
     if !present {
         // EXITLOCK.acquire();
         let mut found_page = false;
-        let mut need_wait = false;
-        let addr_base = addr - (addr % PG_SIZE);
+        let mut need_wait: bool = false;
+        let addr_base: usize = addr - (addr % PG_SIZE);
         loop {
             let thread = current();
             {
@@ -162,19 +162,20 @@ pub fn handler(frame: &mut Frame, fault: Exception, addr: usize) {
         // lazy allocating mmap region
         // kprintln!("0x{:x} needed", addr);
         for i in current().mmap_info.lock().iter() {
+            kprintln!("mmap item {:x},{}", i.addr, i.len);
             if i.in_map(addr) {
                 // kprintln!("ALLOCING PAGE at 0x{:x} MMAPID {}", i.addr, i.mmap_id);
                 for j in 0..i.pages {
                     // kprintln!("ALLOCK NEW PAGE at {}", i.addr + j * PG_SIZE);
                     alloc_from_pool(i.addr + j * PG_SIZE);
-
-                    let pos_mem = fscall::tell_handler(i.fd).unwrap_or(-1);
-                    if pos_mem < 0 {
-                        panic!("Tell failed in page fault handler");
+                    if i.fd != 0xFFFF {
+                        let pos_mem = fscall::tell_handler(i.fd).unwrap_or(-1);
+                        if pos_mem < 0 {
+                            panic!("Tell failed in page fault handler");
+                        }
+                        fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
+                        fscall::seek_handler(i.fd, pos_mem as u32);
                     }
-                    fscall::read_handler(i.fd, (i.addr + j * PG_SIZE) as *mut u8, PG_SIZE);
-                    fscall::seek_handler(i.fd, pos_mem as u32);
-
                     let thread = current();
                     let pt = thread.pagetable.as_ref().unwrap();
                     pt.lock().get_pte(i.addr + j * PG_SIZE).unwrap().set_clean();

@@ -55,6 +55,7 @@ pub struct Thread {
     pub page_info: Mutex<Vec<PageInfo>>,
     pub mmap_info: Mutex<Vec<MmapData>>,
     pub swap_table: Mutex<VecDeque<SwapTableEntry>>,
+    pub heap_size: AtomicU32,
 }
 
 impl Thread {
@@ -96,6 +97,7 @@ impl Thread {
             page_info: Mutex::new(page_info),
             mmap_info: Mutex::new(Vec::new()),
             swap_table: Mutex::new(swap_table),
+            heap_size: AtomicU32::new(0),
         }
     }
 
