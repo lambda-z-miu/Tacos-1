@@ -5,13 +5,13 @@ use crate::fs::File;
 use crate::io::prelude::*;
 use crate::{OsError, Result};
 
-const FILE_NAME_LEN_MAX: usize = 28;
+pub const FILE_NAME_LEN_MAX: usize = 28;
 
 /// 32-byte entry.
 #[repr(C)]
 pub struct DirEntry {
-    name: [u8; FILE_NAME_LEN_MAX],
-    inum: Inum,
+    pub name: [u8; FILE_NAME_LEN_MAX],
+    pub inum: Inum,
 }
 
 impl DirEntry {
@@ -24,10 +24,10 @@ impl DirEntry {
     }
 }
 
-/// Currently only support root dir. Other files should not be dir.
-pub struct RootDir(pub(super) File);
+#[derive(Clone)]
+pub struct Dir(pub(super) File);
 
-impl RootDir {
+impl Dir {
     /// Convert a path to inumber. This will iteratively search through the
     /// root dir entries, return the first entry that with the same name of given one.
     pub fn path2inum(&mut self, path: &Path) -> Result<Inum> {
@@ -41,6 +41,7 @@ impl RootDir {
                     .to_str()
                     .or(Err(OsError::CstrFormatErr))?
             };
+            // kprintln!("Name {}", name);
             // Deref `Path` to `String`.
             if path.eq(name) {
                 return Ok(entry.inum);
@@ -50,9 +51,6 @@ impl RootDir {
     }
 
     /// Check if there is a file with the given name.
-    ///
-    /// # See
-    /// [`path2inum()`].
     pub fn exists(&mut self, path: &Path) -> bool {
         self.path2inum(path).is_ok()
     }
@@ -70,7 +68,9 @@ impl RootDir {
         entry.name[0..core::cmp::min(path.len(), FILE_NAME_LEN_MAX - 1)]
             .copy_from_slice(path.as_bytes());
         self.0.seek(SeekFrom::Start(pos))?;
+        kprintln!("Inserting entry '{:?}' at pos {}", entry.name, pos);
         self.0.write_from(entry)?;
+        // self.0.print(3);
         Ok(())
     }
 
@@ -96,6 +96,15 @@ impl RootDir {
                 return Ok(self.0.seek(SeekFrom::Current(-32)).unwrap());
             }
         }
+        let current_len = self.0.len().unwrap();
+        let size = current_len + core::mem::size_of::<DirEntry>();
+        self.0.set_len(size)?;
+        while let Ok(entry) = self.0.read_into::<DirEntry>() {
+            if !entry.is_valid() {
+                return Ok(self.0.seek(SeekFrom::Current(-32)).unwrap());
+            }
+        }
+        // kprintln!("REACHED B");
         Err(OsError::RootDirFull)
     }
 }

@@ -29,6 +29,8 @@ const SYS_CLOSE: usize = 11;
 const SYS_FSTAT: usize = 12;
 const SYS_MMAP: usize = 13;
 const SYS_UNMAP: usize = 14;
+const SYS_CHDIR: usize = 15;
+const SYS_MKDIR: usize = 16;
 const SYS_BRK: usize = 17;
 
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
@@ -72,6 +74,10 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
         SYS_MMAP => memorytrap::mmap_handler(args[0] as u32, args[1] as *mut u8).unwrap_or(-1),
 
         SYS_UNMAP => memorytrap::unmap_handler(args[0] as u32).unwrap_or(-1),
+
+        SYS_CHDIR => fscall::chdir_handler(args[0] as usize).unwrap_or(-1),
+
+        SYS_MKDIR => fscall::mkdir_handler(args[0] as usize).unwrap_or(-1),
 
         SYS_BRK => memorytrap::brk_handler(args[0]).unwrap_or(-1),
 

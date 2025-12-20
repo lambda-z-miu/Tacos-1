@@ -46,3 +46,4 @@ bad-jump2 = ["", 2]
 sc-bad-args = ["", 5]
 
 mytest = ["", 0]
+mkdir = ["", 0]

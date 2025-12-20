@@ -9,6 +9,11 @@ use alloc::sync::Arc;
 use crate::io::{Read, Seek, Write};
 use crate::sync::Mutex;
 use crate::Result;
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FileType {
+    File,
+    Dir,
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                 File System                                */
@@ -34,6 +39,8 @@ pub trait FileSys: Sync + Send + Sized {
     fn open(&self, id: Self::Path) -> Result<File>;
     fn close(&self, file: File);
     fn create(&self, id: Self::Path) -> Result<File>;
+    fn create_dir(&self, id: Self::Path) -> Result<File>;
+    fn change_dir(&self, id: Self::Path) -> Result<()>;
     fn remove(&self, id: Self::Path) -> Result<()>;
 }
 
@@ -72,6 +79,7 @@ pub struct File {
     vnode: Arc<dyn Vnode>,
     pos: usize,
     deny_write: bool,
+    filetype: FileType,
 }
 
 impl File {
@@ -81,6 +89,24 @@ impl File {
 
     pub fn inum(&self) -> usize {
         self.vnode.inum()
+    }
+
+    pub fn print(&mut self, items: usize) {
+        kprintln!(
+            "File inum: {}, len: {}",
+            self.vnode.inum(),
+            self.vnode.len()
+        );
+        if self.filetype == FileType::Dir {
+            self.rewind().unwrap();
+            for i in 0..items {
+                let buf = &mut [0u8; 32];
+                self.read(buf).unwrap();
+                kprintln!("This is a directory, {} entry raw data: {:?}", i, buf);
+            }
+        } else {
+            kprintln!("This is a file.");
+        }
     }
 }
 
@@ -123,11 +149,12 @@ impl File {
         self.pos = set_pos as usize;
     }
 
-    pub fn new(vnode: Arc<dyn Vnode>) -> Self {
+    pub fn new(vnode: Arc<dyn Vnode>, filetype: FileType) -> Self {
         Self {
             vnode,
             pos: 0,
             deny_write: false,
+            filetype,
         }
     }
 

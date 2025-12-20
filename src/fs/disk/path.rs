@@ -1,3 +1,5 @@
+use crate::fs::disk::dir::Dir;
+
 /// Path.
 ///
 /// We uses [`alloc::string::String`] methods for path
@@ -7,7 +9,7 @@ pub struct Path(alloc::string::String);
 
 impl Path {
     pub fn exists(path: Self) -> bool {
-        super::DISKFS.get().root_dir.lock().exists(&path)
+        super::DISKFS.get().current_dir.lock().exists(&path)
     }
 }
 

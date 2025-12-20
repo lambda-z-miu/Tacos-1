@@ -43,7 +43,7 @@ impl FileSys for MemFs {
         let weak = Arc::downgrade(&vnode);
         self.oft.lock().push(weak);
 
-        Ok(File::new(vnode))
+        Ok(File::new(vnode, FileType::File))
     }
 
     fn close(&self, _file: File) {
@@ -52,6 +52,14 @@ impl FileSys for MemFs {
 
     fn create(&self, _id: Self::Path) -> Result<File> {
         unimplemented!();
+    }
+
+    fn create_dir(&self, _id: Self::Path) -> Result<File> {
+        unimplemented!();
+    }
+
+    fn change_dir(&self, id: Self::Path) -> Result<()> {
+        unimplemented!()
     }
 
     fn remove(&self, _id: Self::Path) -> Result<()> {

@@ -214,3 +214,29 @@ pub fn remove_handler(path: usize) -> Result<isize, OsError> {
     DISKFS.remove(path_sys)?;
     return Ok(0);
 }
+
+pub fn mkdir_handler(path: usize) -> Result<isize, OsError> {
+    check_str_valid(path as *const u8)?;
+    let path = c_str_to_string(path as *const u8);
+
+    if path == "".to_string() {
+        return Err(OsError::BadPtr);
+    }
+
+    let path_sys: disk::Path = disk::Path::from(&path as &str);
+    DISKFS.create_dir(path_sys)?;
+    return Ok(0);
+}
+
+pub fn chdir_handler(path: usize) -> Result<isize, OsError> {
+    check_str_valid(path as *const u8)?;
+    let path = c_str_to_string(path as *const u8);
+
+    if path == "".to_string() {
+        return Err(OsError::BadPtr);
+    }
+
+    let path_sys: disk::Path = disk::Path::from(&path as &str);
+    DISKFS.change_dir(path_sys)?;
+    return Ok(0);
+}
