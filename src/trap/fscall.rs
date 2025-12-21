@@ -190,6 +190,7 @@ pub fn seek_handler(fd: u32, pos: u32) -> isize {
     let file = fd_map.get_mut(&fd);
     if let Some(file) = file {
         file.0.set_pos(pos);
+        return 0;
     }
     return -1;
 }

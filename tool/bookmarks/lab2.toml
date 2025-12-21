@@ -47,3 +47,5 @@ sc-bad-args = ["", 5]
 
 mytest = ["", 0]
 mkdir = ["", 0]
+rmdir = ["", 0]
+rm-openned = ["", 0]

@@ -34,7 +34,7 @@ int remove(const char* pathname);
 int open(const char* pathname, int flags);
 int read(int fd, void* buffer, uint size);
 int write(int fd, const void* buffer, uint size);
-void seek(int fd, uint position);
+int seek(int fd, uint position);
 int tell(int fd);
 int close(int fd);
 int fstat(int fd, stat* buf);

@@ -45,6 +45,8 @@ struct InodeDesc {
     sector: Inum,
     /// Whether to remove this inode on drop.
     removed: bool,
+    /// Parent directory inum for removal bookkeeping.
+    parent_dir: Option<Inum>,
     /// Allocated-bytes - file-len.
     /// Used for lazy shrink.
     shrink_len: u32,
@@ -57,6 +59,7 @@ impl InodeDesc {
         Self {
             sector,
             removed: false,
+            parent_dir: None,
             deny_write: 0,
             shrink_len,
         }
@@ -69,7 +72,16 @@ pub struct Inode(Mutex<(InodeDesc, DiskInode)>);
 impl Inode {
     /// Tag to remove the inode on drop.
     pub fn remove(&self) {
-        self.0.lock().0.removed = true;
+        let mut l = self.0.lock();
+        l.0.removed = true;
+        l.0.parent_dir = None;
+    }
+
+    /// Tag to remove the inode on drop with parent directory.
+    pub fn remove_from(&self, parent_dir_inum: Inum) {
+        let mut l = self.0.lock();
+        l.0.removed = true;
+        l.0.parent_dir = Some(parent_dir_inum);
     }
 
     /// Create an inode at `sector` with length of `len`.
@@ -337,11 +349,15 @@ impl Vnode for Inode {
             freemap.dealloc(sector, cnt);
         }
         if desc.removed {
-            // Remove the inode from the disk.
-            let mut rootdir = DISKFS.root_dir.lock();
-            rootdir
-                .remove(desc.sector)
-                .expect("Failed to remove from root dir");
+            // Remove the inode from its parent directory if known.
+            if let Some(parent_inum) = desc.parent_dir {
+                if let Ok(dir_vnode) = Self::open(parent_inum) {
+                    let mut dir =
+                        super::dir::Dir(crate::fs::File::new(dir_vnode, crate::fs::FileType::Dir));
+                    // Ignore errors here to avoid panicking during drop.
+                    let _ = dir.remove(desc.sector);
+                }
+            }
             let mut freemap = DISKFS.free_map.lock();
             freemap.dealloc(data.inner.start as _, bytes_to_sectors(data.inner.len as _));
             freemap.dealloc(desc.sector, 1);

@@ -6,6 +6,7 @@ mod inode;
 mod path;
 mod swap;
 
+use crate::io::{Read, Seek};
 use core::char::MAX;
 use core::convert::TryInto;
 use core::mem::size_of;
@@ -227,16 +228,74 @@ impl FileSys for DiskFs {
     }
 
     fn remove(&self, id: Self::Path) -> Result<()> {
+        // Locate target inum under current directory
         let inum = self.current_dir.lock().path2inum(&id)?;
+
+        // Open target vnode (or get cached)
+        let vnode = if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
+            arc
+        } else {
+            Inode::open(inum)?
+        };
+
+        // Detect if target is a directory by checking leading entries '.' and '..'
+        let is_dir = {
+            let mut dir_file = Dir(File::new(vnode.clone(), FileType::Dir));
+            // Try reading first two entries; if fails, it's not a dir.
+            if dir_file.0.rewind().is_err() {
+                false
+            } else if let Ok(dot) = dir_file.0.read_into::<DirEntry>() {
+                let is_dot = dot.name[0] == b'.' && (dot.name[1] == 0 || dot.name[1] == b'.');
+                if !is_dot {
+                    false
+                } else if let Ok(dotdot) = dir_file.0.read_into::<DirEntry>() {
+                    dotdot.name[0] == b'.' && dotdot.name[1] == b'.'
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        };
+
+        // If directory, ensure it is empty (only '.' and '..' or invalid entries)
+        if is_dir {
+            // Prohibit removing '.' or '..' explicitly
+            if id.as_str() == "." || id.as_str() == ".." {
+                return Err(OsError::PermissionDenied);
+            }
+
+            let mut dir_file = Dir(File::new(vnode.clone(), FileType::Dir));
+            dir_file.0.rewind()?;
+            // Skip '.' and '..'
+            let _ = dir_file.0.read_into::<DirEntry>();
+            let _ = dir_file.0.read_into::<DirEntry>();
+            while let Ok(entry) = dir_file.0.read_into::<DirEntry>() {
+                if !entry.is_valid() {
+                    continue;
+                }
+                let is_dot = entry.name[0] == b'.' && entry.name[1] == 0;
+                let is_dotdot = entry.name[0] == b'.' && entry.name[1] == b'.';
+                if !is_dot && !is_dotdot {
+                    return Err(OsError::DirNotEmpty);
+                }
+            }
+        }
+
+        // Remove entry from current directory
         let mut current_dir = self.current_dir.lock();
         current_dir.remove(inum)?;
+
+        // Mark inode removed, carrying parent directory inum for later close
+        let parent_inum = current_dir.0.inum() as u32;
         if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
-            arc.remove();
+            arc.remove_from(parent_inum);
             return Ok(());
         }
+
         // Not opened
         let inode = Inode::open(inum)?;
-        inode.remove();
+        inode.remove_from(parent_inum);
         Ok(())
     }
 

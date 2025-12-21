@@ -25,4 +25,5 @@ pub enum OsError {
     MMapIDNotExist = -18,
     NotADirectory = -19,
     FileExists = -20,
+    DirNotEmpty = -21,
 }
