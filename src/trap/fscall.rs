@@ -145,7 +145,6 @@ pub fn open_handler(path: usize, flag: usize) -> Result<isize, OsError> {
     if disk::Path::exists(disk::Path::from(&path as &str)) {
         //file exists
         let file_opened = disk::DISKFS.open(path_sys)?;
-        kprintln!("Opened file is dir? {}", file_opened.is_dir());
         // opened file
         let new_fd = current().get_fresh_fd();
         let thread = current();

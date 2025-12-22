@@ -104,9 +104,9 @@ pub fn mmap_handler(fd: u32, addr: *mut u8) -> Result<isize, OsError> {
     return Ok(mmap_id as isize);
 }
 
-pub fn brk_handler(bytes_needed: usize) -> Result<isize, OsError> {
+pub fn brk_handler(bytes_needed: usize) -> Result<usize, OsError> {
     if bytes_needed == 0 {
-        return Ok(current().heap_size.load(Ordering::SeqCst) as isize);
+        return Ok(current().heap_size.load(Ordering::SeqCst) as usize + HEAP_BASE);
     }
     let page_needed = (bytes_needed + PG_SIZE - 1) / PG_SIZE;
     let addr = HEAP_BASE + current().heap_size.load(Ordering::SeqCst) as usize;
@@ -138,9 +138,8 @@ pub fn brk_handler(bytes_needed: usize) -> Result<isize, OsError> {
     current().add_mmap(mmapitem);
     let old_brk = current()
         .heap_size
-        .fetch_add((page_needed * PG_SIZE) as u32, Ordering::SeqCst);
-    let newbrk = old_brk + (page_needed * PG_SIZE) as u32;
-    return Ok(newbrk as isize);
+        .fetch_add((page_needed * PG_SIZE) as u64, Ordering::SeqCst);
+    return Ok(old_brk as usize + HEAP_BASE as usize);
 }
 
 fn check_overlap(fd1: u32, fd2: u32) -> bool {

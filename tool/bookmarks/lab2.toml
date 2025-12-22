@@ -45,7 +45,7 @@ bad-store2 = ["", 2]
 bad-jump2 = ["", 2]
 sc-bad-args = ["", 5]
 
-mytest = ["", 0, 10]
+malloc-simple = ["", 0]
 mkdir = ["", 0]
 mkdir-corner = ["", 0]
 rmdir = ["", 0]

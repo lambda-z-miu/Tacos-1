@@ -37,6 +37,7 @@ void* calloc(size_t nmemb, size_t size) {
 
 void main() {
     void* p1 = dlmalloc(1000);
+    printf("%lx",p1);
     for(char* ptr = (char*)p1; ptr < (char*)p1 + 26;ptr++){
         *ptr = 'a' + (ptr - (char*)p1);
     }

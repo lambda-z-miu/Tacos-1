@@ -11,6 +11,7 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::fmt::{self, Debug};
+use core::sync::atomic::AtomicU64;
 use core::sync::atomic::{AtomicIsize, AtomicU32, Ordering::SeqCst};
 use fs::FileSys;
 
@@ -55,7 +56,7 @@ pub struct Thread {
     pub page_info: Mutex<Vec<PageInfo>>,
     pub mmap_info: Mutex<Vec<MmapData>>,
     pub swap_table: Mutex<VecDeque<SwapTableEntry>>,
-    pub heap_size: AtomicU32,
+    pub heap_size: AtomicU64,
 }
 
 impl Thread {
@@ -97,7 +98,7 @@ impl Thread {
             page_info: Mutex::new(page_info),
             mmap_info: Mutex::new(Vec::new()),
             swap_table: Mutex::new(swap_table),
-            heap_size: AtomicU32::new(0),
+            heap_size: AtomicU64::new(0),
         }
     }
 

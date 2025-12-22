@@ -154,7 +154,7 @@ impl File {
     }
 
     pub fn new(vnode: Arc<dyn Vnode>, filetype: FileType) -> Self {
-        kprintln!("is dir? {}", filetype == FileType::Dir);
+        // kprintln!("is dir? {}", filetype == FileType::Dir);
         Self {
             vnode,
             pos: 0,

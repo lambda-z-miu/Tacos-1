@@ -79,7 +79,7 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
 
         SYS_MKDIR => fscall::mkdir_handler(args[0] as usize).unwrap_or(-1),
 
-        SYS_SBRK => memorytrap::brk_handler(args[0]).unwrap_or(-1),
+        SYS_SBRK => memorytrap::brk_handler(args[0]).unwrap_or(0xFFFFFFFFFFFFFFFF) as isize,
 
         _ => {
             kprintln!("unexpected syscall id: {}", _id);
