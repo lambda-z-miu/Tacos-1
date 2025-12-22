@@ -2,13 +2,15 @@
 #include "sample.inc"
 #include "types.h"
 #include "user.h"
+#include "malloc.h"
 // ------------------- memory management -------------------
-static size_t vac = 0;
-static size_t head = 0x20000000; // initial brk
+//static size_t vac = 0;
+//static size_t head = 0x20000000; // initial brk
+/*
 void* malloc(size_t size) {
     if(vac < size){
         int page = (size + 0x1000 -1) / 0x1000;
-        brk (page * 0x1000);
+        sbrk (page * 0x1000);
         vac += page * 0x1000;
     }
     vac -= size;
@@ -20,7 +22,7 @@ void* malloc(size_t size) {
 void free(void* p) {
     (void)p;  // no-op
 }
-/*
+
 void* calloc(size_t nmemb, size_t size) {
     size_t total = nmemb * size;
     void* ptr = malloc(total);
@@ -34,7 +36,7 @@ void* calloc(size_t nmemb, size_t size) {
 
 
 void main() {
-    void* p1 = malloc(1000);
+    void* p1 = dlmalloc(1000);
     for(char* ptr = (char*)p1; ptr < (char*)p1 + 26;ptr++){
         *ptr = 'a' + (ptr - (char*)p1);
     }

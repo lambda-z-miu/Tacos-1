@@ -31,7 +31,7 @@ const SYS_MMAP: usize = 13;
 const SYS_UNMAP: usize = 14;
 const SYS_CHDIR: usize = 15;
 const SYS_MKDIR: usize = 16;
-const SYS_BRK: usize = 17;
+const SYS_SBRK: usize = 17;
 
 pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
     let old = sbi::interrupt::set(false);
@@ -79,7 +79,7 @@ pub fn syscall_handler(_id: usize, args: [usize; 3]) -> isize {
 
         SYS_MKDIR => fscall::mkdir_handler(args[0] as usize).unwrap_or(-1),
 
-        SYS_BRK => memorytrap::brk_handler(args[0]).unwrap_or(-1),
+        SYS_SBRK => memorytrap::brk_handler(args[0]).unwrap_or(-1),
 
         _ => {
             kprintln!("unexpected syscall id: {}", _id);
