@@ -19,8 +19,8 @@ fn make(verbose: bool, args: &Vec<&str>) -> std::io::Result<()> {
     child.current_dir(MAKE_DIR).stdin(process::Stdio::piped());
     if !verbose {
         child
-            .stdout(process::Stdio::piped())
-            .stderr(process::Stdio::piped());
+            .stdout(process::Stdio::null())
+            .stderr(process::Stdio::null());
     }
     let mut child = child.args(args).spawn()?;
     child.wait()?;
