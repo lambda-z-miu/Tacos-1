@@ -32,16 +32,13 @@ pub fn main(mut args: crate::cli::TestArgs) -> Result<()> {
     // Create a record.
     let record = &mut Record(Vec::new(), Vec::new());
     // Get the cases and its belonging lab.
-    println!{"A"};
     let (unit, lab1, lab2, lab3) = crate::book::test_cases(&args)?;
-    println!{"A"};
     // Suppress gdb and grading when running verbose mode.
     if args.verbose {
         args.gdb = false;
         args.previous_failed = false;
         args.grade = false;
     }
-    println!{"A"};
     // Check and set for gdb mode.
     if args.gdb {
         let _chk = ((unit.0.len() + lab1.0.len() + lab2.0.len() + lab3.0.len()) <= 1)
@@ -152,7 +149,6 @@ fn run(case: &String, args: Vec<&str>, record: &mut Record) -> Result<()> {
         .stdout(std::process::Stdio::piped())
         .args(args)
         .spawn()?;
-    println!{"E"};
     if *GDB.get().unwrap() {
         // TODO: functionality not tested.
         println!("{}", "Use \'gdb-multiarch\' to debug.".bold().italic());

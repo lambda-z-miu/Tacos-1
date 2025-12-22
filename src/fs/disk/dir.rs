@@ -68,7 +68,7 @@ impl Dir {
         entry.name[0..core::cmp::min(path.len(), FILE_NAME_LEN_MAX - 1)]
             .copy_from_slice(path.as_bytes());
         self.0.seek(SeekFrom::Start(pos))?;
-        kprintln!("Inserting entry '{:?}' at pos {}", entry.name, pos);
+        // kprintln!("Inserting entry '{:?}' at pos {}", entry.name, pos);
         self.0.write_from(entry)?;
         // self.0.print(3);
         Ok(())

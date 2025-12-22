@@ -53,6 +53,10 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?; // file not exist
     file.1.read_permision()?; // file cannot be read
+    if file.0.is_dir() {
+        kprintln!("!");
+        return Err(OsError::IsADirectory);
+    }
     unsafe {
         // kprintln!("READ HAPPENED");
         let size = file.0.read(from_raw_parts_mut(buf, len))?;
@@ -78,17 +82,14 @@ pub fn write_handler(fd: u32, buf: *const u8, len: usize) -> Result<isize, OsErr
     if len == 0 {
         return Ok(0); //zero reading is permited
     }
-    /*
-        for i in 0..len {
-            unsafe {
-                kprintln!("WRITING {}", *(buf.wrapping_add(i)));
-            }
-        }
-    */
+
     let thread = current();
     let mut fd_map = thread.fd.lock();
     let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?; // file not exist
     file.1.write_permision()?; // permision denied
+    if file.0.is_dir() {
+        return Err(OsError::IsADirectory);
+    }
     unsafe {
         let size = file.0.write(from_raw_parts(buf, len))?;
         return Ok(size as isize);
@@ -144,6 +145,7 @@ pub fn open_handler(path: usize, flag: usize) -> Result<isize, OsError> {
     if disk::Path::exists(disk::Path::from(&path as &str)) {
         //file exists
         let file_opened = disk::DISKFS.open(path_sys)?;
+        kprintln!("Opened file is dir? {}", file_opened.is_dir());
         // opened file
         let new_fd = current().get_fresh_fd();
         let thread = current();

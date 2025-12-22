@@ -108,6 +108,10 @@ impl File {
             kprintln!("This is a file.");
         }
     }
+
+    pub fn is_dir(&self) -> bool {
+        self.filetype == FileType::Dir
+    }
 }
 
 impl Read for File {
@@ -150,11 +154,12 @@ impl File {
     }
 
     pub fn new(vnode: Arc<dyn Vnode>, filetype: FileType) -> Self {
+        kprintln!("is dir? {}", filetype == FileType::Dir);
         Self {
             vnode,
             pos: 0,
             deny_write: false,
-            filetype,
+            filetype: filetype,
         }
     }
 

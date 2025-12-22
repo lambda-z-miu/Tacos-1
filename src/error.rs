@@ -26,4 +26,5 @@ pub enum OsError {
     NotADirectory = -19,
     FileExists = -20,
     DirNotEmpty = -21,
+    IsADirectory = -22,
 }

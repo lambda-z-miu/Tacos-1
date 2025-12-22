@@ -134,7 +134,9 @@ impl FileSys for DiskFs {
             let weak = Arc::downgrade(&vnode);
             inode_table.lock().insert(ROOT_DIR_SECTOR, weak);
             let mut inner_dir = Dir(File::new(vnode, FileType::Dir));
-            DiskFs::init_dir(&mut inner_dir.0, ROOT_DIR_SECTOR);
+            inner_dir.insert(&(".".try_into().unwrap()), ROOT_DIR_SECTOR)?;
+            inner_dir.insert(&("..".try_into().unwrap()), ROOT_DIR_SECTOR)?;
+            // DiskFs::init_dir(&mut inner_dir.0, ROOT_DIR_SECTOR);
             inner_dir
         };
         Ok(Self {
@@ -208,11 +210,11 @@ impl FileSys for DiskFs {
         if !self.current_dir.lock().exists(&id) {
             return Err(OsError::NoSuchFile);
         }
-        kprintln!("Found");
         // Expect existing.
         let inum = self.current_dir.lock().path2inum(&id).unwrap();
         if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
-            return Ok(File::new(arc, FileType::File));
+            let ft = Self::detect_filetype(&arc);
+            return Ok(File::new(arc, ft));
         }
 
         let vnode = Inode::open(inum)?;
@@ -220,7 +222,8 @@ impl FileSys for DiskFs {
         let weak = Arc::downgrade(&vnode);
         self.inode_table.lock().insert(inum, weak);
 
-        Ok(File::new(vnode, FileType::File))
+        let ft = Self::detect_filetype(&vnode);
+        Ok(File::new(vnode, ft))
     }
 
     fn close(&self, file: super::File) {
@@ -321,6 +324,20 @@ impl FileSys for DiskFs {
 }
 
 impl DiskFs {
+    /// Best-effort detection of vnode type by inspecting leading dir entries.
+    fn detect_filetype(vnode: &Arc<Inode>) -> FileType {
+        let mut f = File::new(vnode.clone(), FileType::Dir);
+        if f.rewind().is_ok() {
+            if let (Ok(dot), Ok(dotdot)) = (f.read_into::<DirEntry>(), f.read_into::<DirEntry>()) {
+                let is_dot = dot.name[0] == b'.';
+                let is_dotdot = dotdot.name[0] == b'.' && dotdot.name[1] == b'.';
+                if is_dot && is_dotdot {
+                    return FileType::Dir;
+                }
+            }
+        }
+        FileType::File
+    }
     fn init_dir(dir: &mut File, inode_parent: u32) -> Result<()> {
         assert!(dir.filetype == FileType::Dir);
         let dot = DirEntry {
