@@ -54,7 +54,6 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
     let file = fd_map.get_mut(&fd).ok_or(OsError::FileNotExist)?; // file not exist
     file.1.read_permision()?; // file cannot be read
     if file.0.is_dir() {
-        kprintln!("!");
         return Err(OsError::IsADirectory);
     }
     unsafe {

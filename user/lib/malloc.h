@@ -49,7 +49,6 @@ extern "C" {
   cases less (typically by 8K) than the maximum representable value of
   a size_t. Requests greater than this value result in failure.
 */
-#define USE_DL_PREFIX 1
 #ifndef USE_DL_PREFIX
 void*  malloc(size_t);
 #else

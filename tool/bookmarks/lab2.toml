@@ -46,7 +46,9 @@ bad-jump2 = ["", 2]
 sc-bad-args = ["", 5]
 
 malloc-simple = ["", 0]
+
 mkdir = ["", 0]
 mkdir-corner = ["", 0]
 rmdir = ["", 0]
 rm-openned = ["", 0]
+dirstat = ["", 0]

@@ -230,7 +230,6 @@
 */
 
 /* #define WIN32 */
-#define USE_DL_PREFIX 1
 #ifdef WIN32
 
 #define WIN32_LEAN_AND_MEAN
