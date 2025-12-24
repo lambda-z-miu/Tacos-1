@@ -102,7 +102,7 @@ impl File {
             for i in 0..items {
                 let buf = &mut [0u8; 32];
                 self.read(buf).unwrap();
-                kprintln!("This is a directory, {} entry raw data: {:?}", i, buf);
+                // kprintln!("This is a directory, {} entry raw data: {:?}", i, buf);
             }
         } else {
             kprintln!("This is a file.");

@@ -57,7 +57,6 @@ pub fn read_handler(fd: u32, buf: *mut u8, len: usize) -> Result<isize, OsError>
         return Err(OsError::IsADirectory);
     }
     unsafe {
-        // kprintln!("READ HAPPENED");
         let size = file.0.read(from_raw_parts_mut(buf, len))?;
         return Ok(size as isize);
     }
@@ -141,23 +140,21 @@ pub fn open_handler(path: usize, flag: usize) -> Result<isize, OsError> {
     }
 
     let path_sys: disk::Path = disk::Path::from(&path as &str);
-    if disk::Path::exists(disk::Path::from(&path as &str)) {
+    if let Ok(file_openned) = disk::DISKFS.open(path_sys.clone()) {
         //file exists
-        let file_opened = disk::DISKFS.open(path_sys)?;
-        // opened file
         let new_fd = current().get_fresh_fd();
         let thread = current();
         let mut fd_map = thread.fd.lock();
-        fd_map.insert(new_fd, (file_opened, fdflag));
+        fd_map.insert(new_fd, (file_openned, fdflag));
         return Ok(new_fd as isize);
     } else {
         // file does not exits
         fdflag.get_create()?;
-        let file_opened = disk::DISKFS.create(path_sys)?;
+        let file_openned = disk::DISKFS.create(path_sys)?;
         let new_fd = current().get_fresh_fd();
         let thread = current();
         let mut fd_map = thread.fd.lock();
-        fd_map.insert(new_fd, (file_opened, fdflag));
+        fd_map.insert(new_fd, (file_openned, fdflag));
         return Ok(new_fd as isize);
     }
 }

@@ -7,6 +7,8 @@ mod path;
 mod swap;
 
 use crate::io::{Read, Seek};
+use crate::thread::current;
+use alloc::vec::Vec;
 use core::char::MAX;
 use core::convert::TryInto;
 use core::mem::size_of;
@@ -175,7 +177,11 @@ impl FileSys for DiskFs {
             self.inode_table.lock().insert(sector, weak);
 
             self.current_dir.lock().insert(&id, sector)?;
-            kprintln!("Inserted entry '{}' in current dir, now", id.as_str());
+            kprintln!(
+                "Inserted entry '{}' in current dir, {}",
+                id.as_str(),
+                sector
+            );
             self.current_dir.lock().0.print(3);
             vnode
         };
@@ -207,18 +213,14 @@ impl FileSys for DiskFs {
     }
 
     fn open(&self, id: Self::Path) -> Result<super::File> {
-        if !self.current_dir.lock().exists(&id) {
-            return Err(OsError::NoSuchFile);
-        }
         // Expect existing.
-        let inum = self.current_dir.lock().path2inum(&id).unwrap();
+        let (_, inum) = self.get_by_path(&id)?;
         if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
             let ft = Self::detect_filetype(&arc);
             return Ok(File::new(arc, ft));
         }
 
         let vnode = Inode::open(inum)?;
-        kprintln!("Opened file inum {}", inum);
         let weak = Arc::downgrade(&vnode);
         self.inode_table.lock().insert(inum, weak);
 
@@ -232,13 +234,15 @@ impl FileSys for DiskFs {
 
     fn remove(&self, id: Self::Path) -> Result<()> {
         // Locate target inum under current directory
-        let inum = self.current_dir.lock().path2inum(&id)?;
+        let (mut parent_dir, inum) = self.get_by_path(&id)?;
 
         // Open target vnode (or get cached)
         let vnode = if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
             arc
         } else {
-            Inode::open(inum)?
+            let inode = Inode::open(inum)?;
+            kprintln!("Not opened inode {}", inum);
+            inode
         };
 
         // Detect if target is a directory by checking leading entries '.' and '..'
@@ -286,11 +290,10 @@ impl FileSys for DiskFs {
         }
 
         // Remove entry from current directory
-        let mut current_dir = self.current_dir.lock();
-        current_dir.remove(inum)?;
+        parent_dir.remove(inum)?;
 
         // Mark inode removed, carrying parent directory inum for later close
-        let parent_inum = current_dir.0.inum() as u32;
+        let parent_inum = parent_dir.0.inum() as u32;
         if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
             arc.remove_from(parent_inum);
             return Ok(());
@@ -324,6 +327,34 @@ impl FileSys for DiskFs {
 }
 
 impl DiskFs {
+    fn get_by_path(&self, id: &Path) -> Result<(Dir, u32)> {
+        let parts = id.as_str().split('/').collect::<Vec<&str>>();
+        let mut tmp = self.current_dir.lock().clone();
+        for i in (0..parts.len() - 1) {
+            if (!tmp.exists(&(parts[i].try_into().unwrap()))) {
+                return Err(OsError::NoSuchFile);
+            }
+            tmp = {
+                let inum = tmp.path2inum(&(parts[i].into())).unwrap();
+                let vnode =
+                    if let Some(arc) = self.inode_table.lock().get(&inum).and_then(Weak::upgrade) {
+                        arc
+                    } else {
+                        Inode::open(inum)?
+                    };
+                let ft = Self::detect_filetype(&vnode);
+                Dir(File::new(vnode, ft))
+            };
+        }
+
+        let file_name = parts[parts.len() - 1];
+        if !tmp.exists(&file_name.into()) {
+            return Err(OsError::NoSuchFile);
+        }
+        let inum = tmp.path2inum(&file_name.into()).unwrap();
+        return Ok((tmp, inum));
+    }
+
     /// Best-effort detection of vnode type by inspecting leading dir entries.
     fn detect_filetype(vnode: &Arc<Inode>) -> FileType {
         let mut f = File::new(vnode.clone(), FileType::Dir);
