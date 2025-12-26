@@ -10,8 +10,8 @@ mod syscall;
 mod util;
 
 use crate::device::{plic, virtio};
-use crate::sbi;
 use crate::thread;
+use crate::{sbi, userproc};
 use core::arch;
 
 use riscv::register::scause::{Exception::*, Interrupt::*, Trap::*};
@@ -23,7 +23,7 @@ use riscv::register::*;
 /* -------------------------------------------------------------------------- */
 
 #[repr(C)]
-
+#[derive(Clone)]
 /// Trap context
 pub struct Frame {
     /// General regs[0..31].
@@ -73,7 +73,12 @@ pub extern "C" fn trap_handler(frame: &mut Frame) {
             unsafe {
                 crate::trap::util::SP = frame.x[2];
             }
-            frame.x[10] = syscall::syscall_handler(id, args) as usize;
+            if id == 18 {
+                kprintln!("Fork syscall invoked");
+                frame.x[10] = crate::userproc::fork_handler(frame) as usize;
+            } else {
+                frame.x[10] = syscall::syscall_handler(id, args) as usize;
+            }
         }
 
         Interrupt(SupervisorTimer) => {

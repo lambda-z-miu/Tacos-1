@@ -31,3 +31,4 @@ entry("munmap");
 entry("chdir");
 entry("mkdir");
 entry("sbrk");
+entry("fork");

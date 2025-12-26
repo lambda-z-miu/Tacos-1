@@ -10,17 +10,21 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::arch::asm;
+use core::clone;
 use core::mem::{size_of, MaybeUninit};
 use ptr::*;
 use riscv::register::sstatus;
 
+use crate::fs::disk::DISKFS;
 use crate::fs::{self, File};
 use crate::mem::pagetable::KernelPgTable;
+use crate::mem::swapmanager::{MemState, SwapTableEntry};
 use crate::sync::{sleep, Lock};
 use crate::thread::{self, current, schedule, Status, Thread};
 use crate::trap::{trap_exit_u, Frame};
 use core::sync::atomic::Ordering::SeqCst;
 
+#[derive(Clone)]
 pub struct UserProc {
     #[allow(dead_code)]
     bin: File,
@@ -150,6 +154,47 @@ pub fn execute(mut file: File, argv: Vec<String>) -> isize {
         .spawn()
         .id()
 }
+
+pub fn fork_handler(frame: &Frame) -> isize {
+    // It only copies L2 pagetable. This approach allows the new thread
+    // to access kernel code and data during syscall without the need to
+    // switch pagetables.
+    // let mut pt = KernelPgTable::clone();
+    let nextid = crate::thread::imp::TID.fetch_add(1, SeqCst);
+    let thread = current();
+    let mut swap_table_usr = thread.swap_table.lock().clone();
+
+    let lock = thread.pagetable.as_ref().unwrap();
+    let mut pt = (*lock.lock()).clone();
+    drop(lock);
+    for i in pt.entries.iter_mut() {
+        i.set_ronly();
+    }
+    pt.activate();
+
+    // Initialize frame, pass argument to user.
+    let mut frame = frame.clone();
+
+    // Here the new process will be created.
+
+    let mut userproc = thread.userproc.clone().unwrap();
+    userproc.bin.deny_write();
+    let stack_end = frame.x[2];
+    frame.x[10] = 0; // return 0 to child
+
+    thread::Builder::new(move || start(frame))
+        .pagetable(pt)
+        .userproc(userproc)
+        .set_stack(stack_end)
+        .swaptable(swap_table_usr)
+        .pageinfo(current().page_info.lock().clone())
+        .thread_id(nextid)
+        .spawn()
+        .id();
+
+    return nextid;
+}
+
 /// Exits a process.
 ///
 /// Panic if the current thread doesn't own a user process.

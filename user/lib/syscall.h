@@ -20,3 +20,4 @@
 #define SYS_MKDIR 16 /**< Create a directory. */
 
 #define SYS_SBRK 17
+#define SYS_FORK 18

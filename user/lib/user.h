@@ -43,6 +43,7 @@ void munmap(int mapid);
 int chdir(const char* dir);
 int mkdir(const char* dir);
 void* sbrk(int increment);
+int fork(void);
 
 // ulib.c
 void fprintf(int fd, const char* fmt, ...);

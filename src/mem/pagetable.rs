@@ -40,7 +40,7 @@ const PPN_MASK: usize = (1 << 44) - 1;
 /// Reference to a in-memory page table
 pub struct PageTable {
     /// Each page table has 512 entries.
-    entries: &'static mut [Entry; Self::NENTRY],
+    pub entries: &'static mut [Entry; Self::NENTRY],
 }
 
 impl PageTable {
@@ -86,6 +86,46 @@ impl PageTable {
                 .walk(Self::px(1, va))
                 .map(|l0_table| l0_table.entries.get_mut(Self::px(0, va)).unwrap())
         })
+    }
+
+    /// Deeply clones this page table, sharing global entries and copying non-global leaves.
+    pub fn deep_clone(&self) -> PageTable {
+        unsafe { Self::deep_clone_impl(self, 2) }
+    }
+
+    unsafe fn deep_clone_impl(src: &PageTable, level: usize) -> PageTable {
+        let mut new_table = PageTable::new();
+
+        for (idx, entry) in src.entries.iter().enumerate() {
+            if !entry.is_valid() {
+                continue;
+            }
+
+            if entry.is_global() {
+                new_table.entries[idx] = *entry;
+                continue;
+            }
+
+            if entry.is_leaf() {
+                let page_count = 1usize << (9 * level);
+                let byte_len = page_count * PG_SIZE;
+
+                let dst_va = UserPool::alloc_pages(page_count).expect("user memory exhausted");
+                let src_va = entry.pa().into_va();
+
+                ptr::copy_nonoverlapping(src_va as *const u8, dst_va, byte_len);
+                new_table.entries[idx] = Entry::new(PhysAddr::from(dst_va), entry.flag());
+            } else {
+                let child = Self::deep_clone_impl(
+                    &PageTable::from_raw(entry.pa().into_va() as *mut _),
+                    level - 1,
+                );
+                new_table.entries[idx] =
+                    Entry::new(PhysAddr::from(child.entries.as_ptr()), entry.flag());
+            }
+        }
+
+        new_table
     }
 
     /// Free all memory used by this pagetable back to where they were allocated.
@@ -162,6 +202,12 @@ impl PageTable {
         }
 
         (va >> px_shift(level)) & Self::PX_MASK
+    }
+}
+
+impl Clone for PageTable {
+    fn clone(&self) -> Self {
+        self.deep_clone()
     }
 }
 
